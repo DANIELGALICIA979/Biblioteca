@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, ArrowRight, BookOpen, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -89,19 +89,34 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF7F2] flex flex-col justify-between font-sans text-stone-800 p-4 md:p-10">
+    <div className="register-page bg-[#FAF7F2] font-sans text-stone-800">
       
       {/* Encabezado Principal */}
-      <header className="max-w-6xl w-full mx-auto mb-8">
-        <h1 className="font-serif text-3xl md:text-4xl font-bold text-stone-900 mt-2">
-          REGISTRO DE NUEVOS USUARIOS
-        </h1>
+      <header className="register-header shrink-0 px-8 py-3 flex flex-wrap justify-between items-center gap-3 w-full">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-[#5A3811] text-amber-100 rounded-md">
+            <BookOpen className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="font-serif text-xl font-bold tracking-tight text-stone-900">Biblioteca</h1>
+            <p className="text-xs text-stone-500 font-medium tracking-wide uppercase">
+              Portal de Lectura y Fondo Antiguo
+            </p>
+          </div>
+        </div>
+        <a
+          href="/catalogo"
+          className="text-xs font-semibold text-stone-600 hover:text-stone-900 flex items-center gap-1 transition-colors"
+        >
+          &larr; Regresar al catálogo
+        </a>
       </header>
 
-      {/* Contenedor Grid Principal */}
-      <main className="max-w-6xl w-full mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 items-start flex-1">
+      {/* Formulario de inscripción centrado */}
+      <main className="register-main">
         
-        {/* COLUMNA IZQUIERDA: Vista Previa del Carné Digital */}
+        {/* Vista previa conservada para habilitarla de nuevo cuando se necesite. */}
+        {false && (
         <div className="md:col-span-5 flex flex-col items-center justify-start pt-2">
           <div className="w-full bg-[#1F1914] text-stone-100 rounded-2xl p-6 shadow-2xl border border-stone-800 relative overflow-hidden transition-all transform hover:scale-[1.01]">
             
@@ -155,9 +170,10 @@ export default function Register() {
             * IMAGEN PREVIA.
           </p>
         </div>
+        )}
 
-        {/* COLUMNA DERECHA: Formulario de Inscripción */}
-        <div className="md:col-span-7 bg-white rounded-2xl p-6 md:p-10 shadow-sm border border-stone-200">
+        {/* Formulario de Inscripción */}
+        <div className="register-card w-full bg-white rounded-2xl p-6 md:p-10 shadow-sm border border-stone-200">
           <h2 className="font-serif text-2xl font-bold text-stone-900 mb-1">Formulario de Inscripción</h2>
           <p className="text-xs text-stone-500 mb-6 leading-relaxed">
             Complete sus antecedentes para emitir su carné digital oficial. Todos los datos son resguardados bajo normas estrictas de confidencialidad académica.
@@ -346,6 +362,16 @@ export default function Register() {
         </div>
 
       </main>
+      <footer className="register-footer shrink-0 px-4 md:px-8 py-2 border-t border-stone-200/60 w-full flex flex-col sm:flex-row justify-between items-center text-xs text-stone-500 gap-2">
+        <p className="font-semibold text-stone-700">Bibliotheca</p>
+        <p>© 2026 Bibliotheca Nacional Digital. Todos los derechos reservados.</p>
+        <div className="flex flex-wrap justify-center gap-x-4 gap-y-1">
+          <a href="#" className="hover:text-stone-800">Horarios de Atención</a>
+          <a href="#" className="hover:text-stone-800">Catálogo Histórico</a>
+          <a href="#" className="hover:text-stone-800">Préstamo Interbibliotecario</a>
+          <a href="#" className="hover:text-stone-800">Términos y Privacidad</a>
+        </div>
+      </footer>
     </div>
   );
 }
