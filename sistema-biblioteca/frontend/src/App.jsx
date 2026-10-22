@@ -1,14 +1,12 @@
-import React, { useState } from 'react';
 import Login from './pages/Login';
 import Register from './pages/Register';
 
 function App() {
-  // Puedes cambiar la pantalla con un router o temporalmente con un estado simple:
-  const [currentScreen, setCurrentScreen] = useState('register'); // 'login' o 'register'
+  const isRegisterPage = window.location.pathname.replace(/\/+$/, '') === '/registro';
 
   return (
     <div>
-      {currentScreen === 'register' ? (
+      {isRegisterPage ? (
         <Register />
       ) : (
         <Login />

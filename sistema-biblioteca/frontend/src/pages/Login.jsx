@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Lock, ExternalLink, ArrowRight, BookOpen, Clock, ShieldCheck } from 'lucide-react';
+import { Mail, Lock, ExternalLink, ArrowRight, BookOpen, ShieldCheck } from 'lucide-react';
 
 export default function Login() {
   const [formData, setFormData] = useState({
@@ -23,15 +23,15 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] flex flex-col justify-between font-sans text-stone-800">
+    <div className="login-page bg-[#FDFBF7] font-sans text-stone-800">
       {/* Encabezado Superior */}
-      <header className="px-8 py-6 flex justify-between items-center max-w-7xl w-full mx-auto">
+      <header className="login-header z-10 px-8 py-3 flex justify-between items-center w-full">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-[#5A3811] text-amber-100 rounded-md">
             <BookOpen className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="font-serif text-xl font-bold tracking-tight text-stone-900">Bibliotheca</h1>
+            <h1 className="font-serif text-xl font-bold tracking-tight text-stone-900">Biblioteca</h1>
             <p className="text-xs text-stone-500 font-medium tracking-wide uppercase">
               Portal de Lectura y Fondo Antiguo
             </p>
@@ -46,31 +46,16 @@ export default function Login() {
       </header>
 
       {/* Contenedor Principal en Tarjeta Solapada */}
-      <main className="flex-1 flex items-center justify-center p-4 md:p-8">
+      <main className="login-main">
         <div className="bg-white rounded-2xl shadow-xl border border-stone-200/80 max-w-5xl w-full grid grid-cols-1 md:grid-cols-12 overflow-hidden min-h-[600px]">
           
           {/* Columna Izquierda: Formulario de Autenticación */}
           <div className="md:col-span-7 p-8 md:p-12 flex flex-col justify-center">
             
-            {/* Tag / Etiqueta de Acceso */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-stone-100 text-stone-600 rounded-full text-xs font-semibold w-fit mb-4">
-              <span className="w-2 h-2 rounded-full bg-amber-700"></span>
-              Acceso Unificado
-            </div>
-
             <h2 className="font-serif text-3xl font-bold text-stone-900 mb-2">Iniciar Sesión</h2>
             <p className="text-stone-600 text-sm mb-6 leading-relaxed">
               Ingresa con tu carné de lector, cuenta institucional o credencial de investigación histórica.
             </p>
-
-            {/* Banner Informativo de Reconocimiento */}
-            <div className="bg-[#FAF5EE] border border-amber-200/60 rounded-lg p-3.5 mb-6 flex gap-3 items-start">
-              <ShieldCheck className="w-5 h-5 text-amber-800 shrink-0 mt-0.5" />
-              <div className="text-xs text-stone-700">
-                <span className="font-bold text-stone-900 block mb-0.5">Reconocimiento Automático</span>
-                El sistema detectará automáticamente si tu perfil corresponde a Lector General, Investigador o Administración.
-              </div>
-            </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Campo: Identificador o Correo */}
@@ -162,27 +147,11 @@ export default function Login() {
             {/* Capa de fondo simulación de imagen oscura */}
             <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#d97706_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none"></div>
 
-            <div className="relative z-10 flex justify-between items-center">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-stone-800/80 border border-stone-700/60 rounded-full text-[10px] font-mono tracking-wider text-amber-200 uppercase">
-                <Clock className="w-3 h-3" /> Fondo Documental 1540 – 2026
-              </span>
-              <span className="text-xs font-serif italic text-stone-400">Sala de Investigadores</span>
-            </div>
-
             <div className="relative z-10 my-12 space-y-6">
               <div className="w-12 h-0.5 bg-amber-600"></div>
               <blockquote className="font-serif text-2xl italic leading-relaxed text-amber-100">
                 «Ordenar una biblioteca es ejercer de un modo silencioso el arte de la crítica y la memoria colectiva.»
               </blockquote>
-              <div className="flex items-center gap-3 pt-2">
-                <div className="p-2 bg-stone-800/80 rounded-full border border-stone-700/50">
-                  <Clock className="w-4 h-4 text-amber-400" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-stone-200">Colección Archivo Central</p>
-                  <p className="text-[11px] text-stone-400">Tratados de Biblioteconomía y Humanidades</p>
-                </div>
-              </div>
             </div>
 
             {/* Tarjetas Estadísticas Inferiores */}
@@ -204,7 +173,7 @@ export default function Login() {
       </main>
 
       {/* Pie de Página */}
-      <footer className="px-8 py-4 border-t border-stone-200/60 max-w-7xl w-full mx-auto flex flex-col sm:flex-row justify-between items-center text-xs text-stone-500 gap-2">
+      <footer className="login-footer px-8 py-4 border-t border-stone-200/60 w-full flex flex-col sm:flex-row justify-between items-center text-xs text-stone-500 gap-2">
         <p className="font-semibold text-stone-700">Bibliotheca</p>
         <p>© 2026 Bibliotheca Nacional Digital. Todos los derechos reservados.</p>
         <div className="flex gap-4">
