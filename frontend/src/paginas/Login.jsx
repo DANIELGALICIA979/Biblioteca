@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Mail, Lock, ExternalLink, ArrowRight, BookOpen, Clock, ShieldCheck } from 'lucide-react';
 
-export default function Login() {
+export default function Login({ onForgotPassword, onRegister }) {
   const [formData, setFormData] = useState({
     identifier: '',
     password: '',
@@ -99,7 +99,14 @@ export default function Login() {
                   <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider">
                     Contraseña
                   </label>
-                  <a href="/recuperar" className="text-xs text-amber-800 hover:underline font-semibold">
+                  <a
+                    href="#solicitar-password"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      onForgotPassword();
+                    }}
+                    className="text-xs text-amber-800 hover:underline font-semibold"
+                  >
                     ¿Olvidaste tu contraseña?
                   </a>
                 </div>
@@ -147,7 +154,14 @@ export default function Login() {
             {/* Enlace a Registro */}
             <div className="mt-8 text-center text-xs text-stone-600">
               ¿Aún no tienes carné o cuenta digital?{' '}
-              <a href="/registro" className="text-amber-800 font-bold hover:underline inline-flex items-center gap-0.5">
+              <a
+                href="#registro"
+                onClick={(event) => {
+                  event.preventDefault();
+                  onRegister();
+                }}
+                className="text-amber-800 font-bold hover:underline inline-flex items-center gap-0.5"
+              >
                 Solicita tu registro aquí <ExternalLink className="w-3 h-3" />
               </a>
             </div>

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { User, Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
 
-export default function Register() {
+export default function Register({ onReturnToLogin }) {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -339,7 +339,14 @@ export default function Register() {
           {/* Redirección a Login */}
           <div className="mt-6 text-center text-xs text-stone-500">
             ¿Ya tienes una cuenta?{' '}
-            <a href="/login" className="text-amber-800 font-bold hover:underline">
+            <a
+              href="#login"
+              onClick={(event) => {
+                event.preventDefault();
+                onReturnToLogin();
+              }}
+              className="text-amber-800 font-bold hover:underline"
+            >
               Inicia sesión
             </a>
           </div>
