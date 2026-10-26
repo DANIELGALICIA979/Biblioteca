@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { User, Mail, Lock, Eye, EyeOff, ArrowRight, BookOpen, CheckCircle2, AlertCircle } from 'lucide-react';
 
-export default function Register() {
+export default function Register({ onReturnToLogin }) {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -89,10 +89,8 @@ export default function Register() {
   };
 
   return (
-    <div className="register-page bg-[#FAF7F2] font-sans text-stone-800">
-      
-      {/* Encabezado Principal */}
-      <header className="register-header shrink-0 px-8 py-3 flex flex-wrap justify-between items-center gap-3 w-full">
+    <div className="min-h-screen bg-[#FDFBF7] flex flex-col justify-between font-sans text-stone-800">
+      <header className="px-8 py-6 flex justify-between items-center max-w-7xl w-full mx-auto">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-[#5A3811] text-amber-100 rounded-md">
             <BookOpen className="w-6 h-6" />
@@ -112,68 +110,8 @@ export default function Register() {
         </a>
       </header>
 
-      {/* Formulario de inscripción centrado */}
-      <main className="register-main">
-        
-        {/* Vista previa conservada para habilitarla de nuevo cuando se necesite. */}
-        {false && (
-        <div className="md:col-span-5 flex flex-col items-center justify-start pt-2">
-          <div className="w-full bg-[#1F1914] text-stone-100 rounded-2xl p-6 shadow-2xl border border-stone-800 relative overflow-hidden transition-all transform hover:scale-[1.01]">
-            
-            {/* Encabezado del Carné */}
-            <div className="flex justify-between items-start mb-10">
-              <div>
-                <p className="text-[10px] uppercase font-mono tracking-wider text-amber-500/80">
-                  Biblioteca Digital
-                </p>
-                <h3 className="font-serif text-lg font-bold text-amber-100">Acceso General</h3>
-              </div>
-              <div className="w-8 h-8 rounded-full bg-amber-900/40 border border-amber-600/40 flex items-center justify-center text-amber-400">
-                <ShieldCheck className="w-5 h-5" />
-              </div>
-            </div>
-
-            {/* Datos del Titular (Dinámicos según el input) */}
-            <div className="space-y-4 relative z-10">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-stone-800/80 rounded-lg border border-stone-700/60 text-amber-200">
-                  <User className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-[10px] text-stone-400 uppercase font-semibold">Titular Solicitante</p>
-                  <p className="font-serif text-base font-bold text-white truncate max-w-[220px]">
-                    {formData.fullName.trim() !== '' ? formData.fullName : 'Lector Registrado'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-stone-800 text-xs">
-                <div>
-                  <p className="text-[10px] text-stone-400 font-semibold">Vigencia</p>
-                  <p className="font-mono text-stone-200">2026 – 2028 Renovación</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-stone-400 font-semibold">Tipo de Usuario</p>
-                  <p className="font-serif text-amber-200/90 font-medium">Lector General</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Marca de agua decorativa */}
-            <div className="absolute -bottom-6 -right-6 text-stone-800/30 pointer-events-none">
-              <svg className="w-40 h-40" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-              </svg>
-            </div>
-          </div>
-          <p className="text-[11px] text-stone-500 mt-3 text-center">
-            * IMAGEN PREVIA.
-          </p>
-        </div>
-        )}
-
-        {/* Formulario de Inscripción */}
-        <div className="register-card w-full bg-white rounded-2xl p-6 md:p-10 shadow-sm border border-stone-200">
+      <main className="max-w-3xl w-full mx-auto flex-1 flex items-center justify-center p-4 md:p-8">
+        <div className="w-full bg-white rounded-2xl p-6 md:p-10 shadow-sm border border-stone-200">
           <h2 className="font-serif text-2xl font-bold text-stone-900 mb-1">Formulario de Inscripción</h2>
           <p className="text-xs text-stone-500 mb-6 leading-relaxed">
             Complete sus antecedentes para emitir su carné digital oficial. Todos los datos son resguardados bajo normas estrictas de confidencialidad académica.
@@ -355,17 +293,25 @@ export default function Register() {
           {/* Redirección a Login */}
           <div className="mt-6 text-center text-xs text-stone-500">
             ¿Ya tienes una cuenta?{' '}
-            <a href="/login" className="text-amber-800 font-bold hover:underline">
+            <a
+              href="#login"
+              onClick={(event) => {
+                event.preventDefault();
+                onReturnToLogin();
+              }}
+              className="text-amber-800 font-bold hover:underline"
+            >
               Inicia sesión
             </a>
           </div>
         </div>
 
       </main>
-      <footer className="register-footer shrink-0 px-4 md:px-8 py-2 border-t border-stone-200/60 w-full flex flex-col sm:flex-row justify-between items-center text-xs text-stone-500 gap-2">
-        <p className="font-semibold text-stone-700">Bibliotheca</p>
-        <p>© 2026 Bibliotheca Nacional Digital. Todos los derechos reservados.</p>
-        <div className="flex flex-wrap justify-center gap-x-4 gap-y-1">
+
+      <footer className="px-8 py-4 border-t border-stone-200/60 max-w-7xl w-full mx-auto flex flex-col sm:flex-row justify-between items-center text-xs text-stone-500 gap-2">
+        <p className="font-semibold text-stone-700">Biblioteca</p>
+        <p>© 2026 Biblioteca Nacional Digital. Todos los derechos reservados.</p>
+        <div className="flex gap-4">
           <a href="#" className="hover:text-stone-800">Horarios de Atención</a>
           <a href="#" className="hover:text-stone-800">Catálogo Histórico</a>
           <a href="#" className="hover:text-stone-800">Préstamo Interbibliotecario</a>
