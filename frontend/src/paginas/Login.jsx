@@ -31,9 +31,9 @@ export default function Login({ onForgotPassword, onRegister }) {
             <BookOpen className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="font-serif text-xl font-bold tracking-tight text-stone-900">Bibliotheca</h1>
+            <h1 className="font-serif text-xl font-bold tracking-tight text-stone-900">Biblioteca</h1>
             <p className="text-xs text-stone-500 font-medium tracking-wide uppercase">
-              Portal de Lectura y Fondo Antiguo
+              Portal de Lectura
             </p>
           </div>
         </div>
@@ -51,26 +51,11 @@ export default function Login({ onForgotPassword, onRegister }) {
           
           {/* Columna Izquierda: Formulario de Autenticación */}
           <div className="md:col-span-7 p-8 md:p-12 flex flex-col justify-center">
-            
-            {/* Tag / Etiqueta de Acceso */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-stone-100 text-stone-600 rounded-full text-xs font-semibold w-fit mb-4">
-              <span className="w-2 h-2 rounded-full bg-amber-700"></span>
-              Acceso Unificado
-            </div>
 
             <h2 className="font-serif text-3xl font-bold text-stone-900 mb-2">Iniciar Sesión</h2>
             <p className="text-stone-600 text-sm mb-6 leading-relaxed">
               Ingresa con tu carné de lector, cuenta institucional o credencial de investigación histórica.
             </p>
-
-            {/* Banner Informativo de Reconocimiento */}
-            <div className="bg-[#FAF5EE] border border-amber-200/60 rounded-lg p-3.5 mb-6 flex gap-3 items-start">
-              <ShieldCheck className="w-5 h-5 text-amber-800 shrink-0 mt-0.5" />
-              <div className="text-xs text-stone-700">
-                <span className="font-bold text-stone-900 block mb-0.5">Reconocimiento Automático</span>
-                El sistema detectará automáticamente si tu perfil corresponde a Lector General, Investigador o Administración.
-              </div>
-            </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Campo: Identificador o Correo */}
@@ -85,7 +70,7 @@ export default function Login({ onForgotPassword, onRegister }) {
                     name="identifier"
                     value={formData.identifier}
                     onChange={handleChange}
-                    placeholder="Ej. L-88402, analista@bibliotheca.org"
+                    placeholder="Ej. L-88402, analista@biblioteca.org"
                     required
                     className="w-full pl-10 pr-4 py-2.5 text-sm border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-800/20 focus:border-amber-800 outline-none transition-all placeholder:text-stone-400"
                   />
@@ -166,9 +151,6 @@ export default function Login({ onForgotPassword, onRegister }) {
               </a>
             </div>
 
-            <div className="mt-6 pt-4 border-t border-stone-100 text-[10px] text-stone-400 text-center">
-              Bibliotheca Nacional Digital • Sistema de Autenticación de Fondos Patrimoniales
-            </div>
           </div>
 
           {/* Columna Derecha: Panel Visual e Inspiracional */}
@@ -180,38 +162,16 @@ export default function Login({ onForgotPassword, onRegister }) {
               <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-stone-800/80 border border-stone-700/60 rounded-full text-[10px] font-mono tracking-wider text-amber-200 uppercase">
                 <Clock className="w-3 h-3" /> Fondo Documental 1540 – 2026
               </span>
-              <span className="text-xs font-serif italic text-stone-400">Sala de Investigadores</span>
+              <span className="text-xs font-serif italic text-stone-400"></span>
             </div>
 
-            <div className="relative z-10 my-12 space-y-6">
+            <div className="relative z-10 flex flex-1 flex-col justify-center space-y-6">
               <div className="w-12 h-0.5 bg-amber-600"></div>
               <blockquote className="font-serif text-2xl italic leading-relaxed text-amber-100">
                 «Ordenar una biblioteca es ejercer de un modo silencioso el arte de la crítica y la memoria colectiva.»
               </blockquote>
-              <div className="flex items-center gap-3 pt-2">
-                <div className="p-2 bg-stone-800/80 rounded-full border border-stone-700/50">
-                  <Clock className="w-4 h-4 text-amber-400" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-stone-200">Colección Archivo Central</p>
-                  <p className="text-[11px] text-stone-400">Tratados de Biblioteconomía y Humanidades</p>
-                </div>
-              </div>
             </div>
 
-            {/* Tarjetas Estadísticas Inferiores */}
-            <div className="relative z-10 grid grid-cols-2 gap-3">
-              <div className="bg-stone-900/60 border border-stone-800 rounded-lg p-3 backdrop-blur-sm">
-                <p className="text-[10px] uppercase font-bold text-stone-400 tracking-wider">Catálogo Activo</p>
-                <p className="text-lg font-bold font-serif text-amber-200 mt-0.5">340,000+</p>
-                <p className="text-[10px] text-stone-400">Volúmenes digitalizados</p>
-              </div>
-              <div className="bg-stone-900/60 border border-stone-800 rounded-lg p-3 backdrop-blur-sm">
-                <p className="text-[10px] uppercase font-bold text-stone-400 tracking-wider">Disponibilidad</p>
-                <p className="text-lg font-bold font-serif text-amber-200 mt-0.5">24 / 7</p>
-                <p className="text-[10px] text-stone-400">Acceso remoto seguro</p>
-              </div>
-            </div>
           </div>
 
         </div>
@@ -219,8 +179,8 @@ export default function Login({ onForgotPassword, onRegister }) {
 
       {/* Pie de Página */}
       <footer className="px-8 py-4 border-t border-stone-200/60 max-w-7xl w-full mx-auto flex flex-col sm:flex-row justify-between items-center text-xs text-stone-500 gap-2">
-        <p className="font-semibold text-stone-700">Bibliotheca</p>
-        <p>© 2026 Bibliotheca Nacional Digital. Todos los derechos reservados.</p>
+        <p className="font-semibold text-stone-700">Biblioteca</p>
+        <p>© 2026 Biblioteca Digital. Todos los derechos reservados.</p>
         <div className="flex gap-4">
           <a href="#" className="hover:text-stone-800">Horarios de Atención</a>
           <a href="#" className="hover:text-stone-800">Catálogo Histórico</a>
