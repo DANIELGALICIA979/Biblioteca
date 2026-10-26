@@ -23,9 +23,9 @@ export default function Login({ onForgotPassword, onRegister }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] flex flex-col justify-between font-sans text-stone-800">
+    <div className="login-page bg-[#FDFBF7] font-sans text-stone-800">
       {/* Encabezado Superior */}
-      <header className="px-8 py-6 flex justify-between items-center max-w-7xl w-full mx-auto">
+      <header className="login-header z-10 px-8 py-3 flex justify-between items-center w-full">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-[#5A3811] text-amber-100 rounded-md">
             <BookOpen className="w-6 h-6" />
@@ -46,12 +46,11 @@ export default function Login({ onForgotPassword, onRegister }) {
       </header>
 
       {/* Contenedor Principal en Tarjeta Solapada */}
-      <main className="flex-1 flex items-center justify-center p-4 md:p-8">
+      <main className="login-main">
         <div className="bg-white rounded-2xl shadow-xl border border-stone-200/80 max-w-5xl w-full grid grid-cols-1 md:grid-cols-12 overflow-hidden min-h-[600px]">
           
           {/* Columna Izquierda: Formulario de Autenticación */}
           <div className="md:col-span-7 p-8 md:p-12 flex flex-col justify-center">
-
             <h2 className="font-serif text-3xl font-bold text-stone-900 mb-2">Iniciar Sesión</h2>
             <p className="text-stone-600 text-sm mb-6 leading-relaxed">
               Ingresa con tu carné de lector, cuenta institucional o credencial de investigación histórica.
