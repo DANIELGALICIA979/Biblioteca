@@ -4,13 +4,18 @@ import Login from './paginas/Login';
 import Register from './paginas/Register';
 import SolicitarCambioContrasena from './paginas/SolicitarCambioContrasena';
 import EstablecerNuevaContrasena from './paginas/EstablecerNuevaContrasena';
+// Nuevas importaciones
+import Catalogo from './paginas/Catalogo';
+import DetalleLibro from './paginas/DetalleLibro';
 
 export default function App() {
-  // Cambia este texto a 'register', 'solicitar-password' o 'establecer-password' para ver las otras pantallas
+  const [selectedBook, setSelectedBook] = useState(null);
   const [currentScreen, setCurrentScreen] = useState(() => {
     const recoveryType = new URLSearchParams(window.location.hash.slice(1)).get('type');
-    return recoveryType === 'recovery' ? 'establecer-password' : 'login';
+    // Modificamos el valor por defecto: si no es recuperación, muestra el catálogo
+    return recoveryType === 'recovery' ? 'establecer-password' : 'catalogo';
   });
+
   const returnToLogin = () => {
     window.history.replaceState(null, '', '/login');
     setCurrentScreen('login');
@@ -18,6 +23,25 @@ export default function App() {
 
   return (
     <div>
+      {/* Vistas Principales */}
+      {currentScreen === 'catalogo' && (
+        <Catalogo
+          onNavigateToLogin={() => setCurrentScreen('login')}
+          onNavigateToDetail={(book) => {
+            setSelectedBook(book);
+            setCurrentScreen('detalle');
+          }}
+        />
+      )}
+      {currentScreen === 'detalle' && (
+        <DetalleLibro
+          bookId={selectedBook?.id}
+          initialBook={selectedBook}
+          onNavigateToCatalog={() => setCurrentScreen('catalogo')}
+        />
+      )}
+
+      {/* Flujo de Autenticación */}
       {currentScreen === 'login' && (
         <Login
           onForgotPassword={() => setCurrentScreen('solicitar-password')}
@@ -30,7 +54,9 @@ export default function App() {
       {currentScreen === 'solicitar-password' && (
         <SolicitarCambioContrasena onReturnToLogin={() => setCurrentScreen('login')} />
       )}
-      {currentScreen === 'establecer-password' &&       <EstablecerNuevaContrasena onReturnToLogin={returnToLogin} />}
+      {currentScreen === 'establecer-password' && ( 
+        <EstablecerNuevaContrasena onReturnToLogin={returnToLogin} />
+      )}
     </div>
   );
 }
