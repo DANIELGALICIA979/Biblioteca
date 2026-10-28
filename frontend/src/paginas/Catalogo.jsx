@@ -1,11 +1,20 @@
 import { useState, useEffect } from 'react';
+import PortadaLibro from '../componentes/PortadaLibro';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const generosDisponibles = [
-  'Ficción',
-  'Clásico',
-  'Misterio',
-  'Infantil',
+  'Desarrollo personal',
   'Ciencia ficción',
+  'Distopía',
+  'Fantasía',
+  'Misterio',
+  'Psicología',
+  'Realismo mágico',
+  'Romance',
+  'Romance clásico',
+  'Suspenso',
+  'Terror',
 ];
 
 export default function Catalogo({ onNavigateToLogin, onNavigateToDetail }) {
@@ -59,7 +68,7 @@ export default function Catalogo({ onNavigateToLogin, onNavigateToDetail }) {
         });
 
         // Asegúrate de que el puerto coincida con tu backend de Node.js (5000)
-        const response = await fetch(`http://localhost:5000/api/catalogo?${queryParams}`);
+        const response = await fetch(`${API_BASE_URL}/catalogo?${queryParams}`);
         
         if (response.ok) {
           const data = await response.json();
@@ -293,13 +302,15 @@ export default function Catalogo({ onNavigateToLogin, onNavigateToDetail }) {
               {libros.map((libro) => (
                 <article key={libro.id} className="bg-surface-container-lowest rounded border border-outline-variant/50 shadow-[0_2px_8px_-2px_rgba(46,31,20,0.05)] hover:-translate-y-1 hover:shadow-[0_8px_24px_-4px_rgba(46,31,20,0.12)] transition-all duration-200 flex flex-col justify-between overflow-hidden group">
                   <div className="p-4 pb-2">
-                    <div className="relative aspect-[2/3] w-full rounded overflow-hidden bg-surface-container-high border-2 border-dashed border-outline-variant flex flex-col items-center justify-center p-4 text-center mb-4 group-hover:scale-[1.02] transition-transform duration-300">
-                      <span className="material-symbols-outlined text-outline text-[36px] mb-2">image</span>
-                      <span className="text-label-sm font-label-sm text-on-surface-variant font-medium">Portada no disponible</span>
+                    <div className="relative aspect-[2/3] w-full rounded overflow-hidden bg-surface-container-high border border-outline-variant/60 mb-4 group-hover:scale-[1.02] transition-transform duration-300">
+                      <PortadaLibro src={libro.portada_url} title={libro.titulo} />
                     </div>
                     <div className="space-y-1.5">
                       <h2 className="text-headline-sm font-headline-sm text-primary leading-snug group-hover:text-secondary transition-colors">{libro.titulo}</h2>
                       <p className="text-body-sm font-body-sm text-on-surface-variant font-medium">{libro.autor}</p>
+                      {libro.genero && (
+                        <p className="text-label-sm font-label-sm text-secondary">{libro.genero}</p>
+                      )}
                     </div>
                   </div>
                   <div className="p-4 pt-2 bg-surface-container-low/40 border-t border-outline-variant/20 mt-2">
