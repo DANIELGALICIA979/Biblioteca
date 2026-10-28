@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import PortadaLibro from '../componentes/PortadaLibro';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 const metadataFields = [
@@ -39,10 +40,17 @@ export default function DetalleLibro({ bookId, initialBook, onNavigateToCatalog 
       return undefined;
     }
 
+    if (initialBook && String(initialBook.id) === String(bookId)) {
+      setBook(initialBook);
+      setLoadError('');
+      setLoadedBookId(bookId);
+      return undefined;
+    }
+
     const abortController = new AbortController();
     const obtenerLibro = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/libros/${encodeURIComponent(bookId)}`, {
+        const response = await fetch(`${API_BASE_URL}/catalogo/${encodeURIComponent(bookId)}`, {
           signal: abortController.signal,
         });
         const payload = await response.json().catch(() => null);
@@ -72,7 +80,7 @@ export default function DetalleLibro({ bookId, initialBook, onNavigateToCatalog 
 
     obtenerLibro();
     return () => abortController.abort();
-  }, [bookId]);
+  }, [bookId, initialBook]);
 
   const solicitarPrestamo = async () => {
     if (!book?.id) {
@@ -111,6 +119,7 @@ export default function DetalleLibro({ bookId, initialBook, onNavigateToCatalog 
   const metadata = metadataFields
     .map(([label, field]) => [label, book?.[field] ?? (field === 'formatos_disponibles' ? book?.formatos : undefined)])
     .filter(([, value]) => hasValue(value));
+  const sinopsis = book?.sinopsis || book?.resumen || book?.descripcion || book?.descripcion_libro;
   const formatsValue = book?.formatos_disponibles ?? book?.formatos;
   const bookContents = Array.isArray(book?.indice_contenidos) ? book.indice_contenidos : [];
   const relatedBooks = Array.isArray(book?.obras_relacionadas) ? book.obras_relacionadas : [];
@@ -160,20 +169,14 @@ export default function DetalleLibro({ bookId, initialBook, onNavigateToCatalog 
         <section className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12 lg:gap-10">
           <aside className="space-y-4 lg:sticky lg:top-24 lg:col-span-4">
             <div className="relative mx-auto flex aspect-[2/3] w-full max-w-sm flex-col items-center justify-center overflow-hidden rounded-lg border border-outline-variant/60 bg-surface-container-high p-6 text-center shadow-[0_12px_32px_-6px_rgba(46,31,20,0.18)] sm:mx-0">
+              <PortadaLibro src={book?.portada_url} title={book?.titulo} />
               {book?.genero && (
-                <span className="absolute left-0 top-3 rounded-r bg-surface-container-lowest px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-secondary">
+                <span className="absolute left-0 top-3 z-20 rounded-r bg-surface-container-lowest/95 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-secondary shadow-sm">
                   {book.genero}
                 </span>
               )}
-              <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-surface-container text-secondary">
-                <span className="material-symbols-outlined text-3xl">menu_book</span>
-              </div>
-              {book?.portada_url ? (
-                <img src={book.portada_url} alt={book?.titulo || 'Portada del libro'} className="absolute inset-0 h-full w-full object-cover" />
-              ) : (
-                <span className="text-label-md font-label-md font-semibold text-primary">Portada no disponible</span>
-              )}
-              <div className="absolute inset-y-0 left-0 w-5 bg-gradient-to-r from-primary/20 via-primary/10 to-transparent" />
+              <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-5 border-r border-white/20 bg-gradient-to-r from-primary/35 via-primary/15 to-transparent" />
+              <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10 h-1 rounded-full bg-white/70 shadow-sm" />
             </div>
 
             {(hasValue(formatsValue) || hasValue(book?.disponibilidad_sala)) && (
@@ -241,7 +244,7 @@ export default function DetalleLibro({ bookId, initialBook, onNavigateToCatalog 
                 {book?.categoria_principal && <span className="rounded bg-surface-container px-2 py-1 text-on-surface-variant">{book.categoria_principal}</span>}
                 {book?.subcategoria && <span className="rounded bg-tertiary-fixed px-2 py-1 text-on-tertiary-fixed-variant">{book.subcategoria}</span>}
               </div>
-              <h1 className="text-display-lg font-display-lg leading-tight tracking-tight text-primary">{book?.titulo || 'Detalle del libro'}</h1>
+              <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-primary sm:text-5xl lg:text-6xl">{book?.titulo || 'Detalle del libro'}</h1>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-body-md font-body-md">
                 <span className="text-on-surface-variant">Autor:</span>
                 <span className="font-semibold text-secondary">{book?.autor || 'Autor desconocido'}</span>
@@ -324,16 +327,20 @@ export default function DetalleLibro({ bookId, initialBook, onNavigateToCatalog 
               </div>
             </section>
 
-            {(book?.sinopsis || book?.nota_critica) && (
-              <section className="space-y-4">
-                {book?.sinopsis && (
-                  <>
-                    <h2 className="text-headline-md font-headline-md text-primary">Sinopsis de la obra</h2>
-                    <p className="max-w-[72ch] text-body-md font-body-md leading-relaxed text-on-surface">{book.sinopsis}</p>
-                  </>
+            {(sinopsis || book?.nota_critica) && (
+              <section className="relative overflow-hidden rounded-xl border border-secondary/20 bg-surface-container-low p-6 shadow-[0_8px_24px_-8px_rgba(46,31,20,0.12)] sm:p-8">
+                {sinopsis && (
+                  <div className="relative border-l-4 border-secondary pl-5 sm:pl-6">
+                    <div className="mb-3 flex items-center gap-2 text-secondary">
+                      <span className="material-symbols-outlined text-xl">auto_stories</span>
+                      <span className="text-label-sm font-bold uppercase tracking-[0.16em]">Conoce la obra</span>
+                    </div>
+                    <h2 className="mb-4 text-2xl font-extrabold tracking-tight text-primary sm:text-3xl">Sinopsis de la obra</h2>
+                    <p className="max-w-[72ch] whitespace-pre-line text-lg font-medium leading-8 text-on-surface sm:text-xl sm:leading-9">{sinopsis}</p>
+                  </div>
                 )}
                 {book?.nota_critica && (
-                  <aside className="max-w-[72ch] rounded-r-lg border-l-2 border-outline-variant bg-surface-container-low p-4 text-body-sm font-body-sm text-on-surface-variant">
+                  <aside className="mt-6 max-w-[72ch] rounded-r-lg border-l-2 border-outline-variant bg-surface-container-lowest/70 p-4 text-body-sm font-body-sm text-on-surface-variant">
                     {book.nota_critica}
                   </aside>
                 )}

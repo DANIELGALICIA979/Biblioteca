@@ -100,6 +100,7 @@ export const obtenerCatalogo = async (req, res) => {
     let libros = (data ?? []).map((libro) => ({
       ...libro,
       genero: libro.generos?.nombre ?? libro.genero ?? null,
+      sinopsis: libro.sinopsis ?? libro.resumen ?? libro.descripcion ?? libro.descripcion_libro ?? null,
     }));
 
     if (String(soloDigitales).toLowerCase() === 'true') {
@@ -147,5 +148,32 @@ export const obtenerCatalogo = async (req, res) => {
   } catch (error) {
     console.error('Error al consultar el catálogo:', error);
     return res.status(500).json({ error: 'No se pudo consultar el catálogo.' });
+  }
+};
+
+export const obtenerLibroCatalogo = async (req, res) => {
+  try {
+    const { data: libro, error } = await supabase
+      .from('libros')
+      .select('*, generos(id, nombre)')
+      .eq('id', req.params.id)
+      .maybeSingle();
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    if (!libro) {
+      return res.status(404).json({ error: 'No se encontró el libro solicitado.' });
+    }
+
+    return res.status(200).json({
+      ...libro,
+      genero: libro.generos?.nombre ?? libro.genero ?? null,
+      sinopsis: libro.sinopsis ?? libro.resumen ?? libro.descripcion ?? libro.descripcion_libro ?? null,
+    });
+  } catch (error) {
+    console.error('Error al consultar el detalle del libro:', error);
+    return res.status(500).json({ error: 'No se pudo consultar el libro solicitado.' });
   }
 };
