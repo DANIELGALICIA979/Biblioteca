@@ -1,15 +1,11 @@
 import { useState, useEffect } from 'react';
 
 const generosDisponibles = [
-  'Romance',
-  'Clásicos',
-  'Fantasía',
-  'Ciencia Ficción',
-  'Poesía y teatro',
-  'Juvenil',
-  'Ciencias y naturaleza',
-  'Historia',
-  'Filosofía',
+  'Ficción',
+  'Clásico',
+  'Misterio',
+  'Infantil',
+  'Ciencia ficción',
 ];
 
 export default function Catalogo({ onNavigateToLogin, onNavigateToDetail }) {
@@ -25,6 +21,8 @@ export default function Catalogo({ onNavigateToLogin, onNavigateToDetail }) {
 
   // Estado para almacenar la respuesta del backend
   const [libros, setLibros] = useState([]);
+  const [errorCatalogo, setErrorCatalogo] = useState('');
+  const [textoBusqueda, setTextoBusqueda] = useState('');
 
   // 2. Función genérica para manejar arrays de checkboxes (Géneros y Formatos)
   const handleFiltroArray = (categoria, valor, estaMarcado) => {
@@ -37,6 +35,14 @@ export default function Catalogo({ onNavigateToLogin, onNavigateToDetail }) {
       }
     });
   };
+
+  useEffect(() => {
+    const temporizador = window.setTimeout(() => {
+      setFiltros((actual) => ({ ...actual, busqueda: textoBusqueda }));
+    }, 350);
+
+    return () => window.clearTimeout(temporizador);
+  }, [textoBusqueda]);
 
   // 3. Petición al Backend
   useEffect(() => {
@@ -57,21 +63,17 @@ export default function Catalogo({ onNavigateToLogin, onNavigateToDetail }) {
         
         if (response.ok) {
           const data = await response.json();
-          setLibros(data);
+          setLibros(Array.isArray(data) ? data : []);
+          setErrorCatalogo('');
         } else {
-          // Si el backend aún no está listo, ponemos datos de prueba temporales para no dejar la pantalla en blanco
-          setLibros([
-            { id: 1, titulo: 'Cien años de soledad', autor: 'Gabriel García Márquez' },
-            { id: 2, titulo: '1984', autor: 'George Orwell' }
-          ]);
+          const payload = await response.json().catch(() => null);
+          setLibros([]);
+          setErrorCatalogo(payload?.error || 'No se pudo consultar el catálogo.');
         }
       } catch (error) {
         console.error('Error de conexión:', error);
-        // Datos de prueba temporales en caso de que el servidor esté apagado
-        setLibros([
-          { id: 1, titulo: 'Cien años de soledad', autor: 'Gabriel García Márquez' },
-          { id: 2, titulo: '1984', autor: 'George Orwell' }
-        ]);
+        setLibros([]);
+        setErrorCatalogo('No se pudo conectar con el servidor del catálogo.');
       }
     };
 
@@ -93,8 +95,8 @@ export default function Catalogo({ onNavigateToLogin, onNavigateToDetail }) {
                 <span className="material-symbols-outlined text-[20px]">search</span>
               </div>
               <input 
-                value={filtros.busqueda}
-                onChange={(e) => setFiltros({ ...filtros, busqueda: e.target.value })}
+                value={textoBusqueda}
+                onChange={(e) => setTextoBusqueda(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-surface-container-lowest border border-outline-variant/60 rounded text-body-sm font-body-sm text-on-surface placeholder:text-outline focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all" 
                 placeholder="Buscar por título o autor." 
                 type="search" 
@@ -150,6 +152,7 @@ export default function Catalogo({ onNavigateToLogin, onNavigateToDetail }) {
                   type="button" 
                   onClick={(e) => {
                     e.stopPropagation();
+                    setTextoBusqueda('');
                     setFiltros({ busqueda: '', soloDigitales: false, generos: [], formatos: [], estado: 'Todos', ordenarPor: '' });
                   }} 
                   className="text-label-sm font-label-sm text-secondary hover:text-on-secondary-fixed-variant transition-colors underline"
@@ -309,7 +312,12 @@ export default function Catalogo({ onNavigateToLogin, onNavigateToDetail }) {
               ))}
             </div>
             
-            {libros.length === 0 && (
+            {errorCatalogo && (
+              <div role="alert" className="rounded border border-error/30 bg-error-container/40 px-4 py-3 text-body-sm text-error">
+                {errorCatalogo}
+              </div>
+            )}
+            {!errorCatalogo && libros.length === 0 && (
               <div className="text-center py-12 text-on-surface-variant">
                 No se encontraron libros que coincidan con los filtros.
               </div>
