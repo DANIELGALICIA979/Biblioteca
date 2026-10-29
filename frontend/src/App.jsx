@@ -10,6 +10,7 @@ import DetalleLibro from './paginas/DetalleLibro';
 
 export default function App() {
   const [selectedBook, setSelectedBook] = useState(null);
+  const [userName, setUserName] = useState('');
   const [currentScreen, setCurrentScreen] = useState(() => {
     const recoveryType = new URLSearchParams(window.location.hash.slice(1)).get('type');
     // Modificamos el valor por defecto: si no es recuperación, muestra el catálogo
@@ -26,7 +27,10 @@ export default function App() {
       {/* Vistas Principales */}
       {currentScreen === 'catalogo' && (
         <Catalogo
-          onNavigateToLogin={() => setCurrentScreen('login')}
+          userName={userName}
+          onNavigateToLogin={() => {
+            if (!userName) setCurrentScreen('login');
+          }}
           onNavigateToDetail={(book) => {
             setSelectedBook(book);
             setCurrentScreen('detalle');
@@ -46,6 +50,10 @@ export default function App() {
         <Login
           onForgotPassword={() => setCurrentScreen('solicitar-password')}
           onRegister={() => setCurrentScreen('register')}
+          onNavigateToCatalog={(name) => {
+            setUserName(name);
+            setCurrentScreen('catalogo');
+          }}
         />
       )}
       {currentScreen === 'register' && (

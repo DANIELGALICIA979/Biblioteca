@@ -17,7 +17,7 @@ const generosDisponibles = [
   'Terror',
 ];
 
-export default function Catalogo({ onNavigateToLogin, onNavigateToDetail }) {
+export default function Catalogo({ onNavigateToLogin, onNavigateToDetail, userName }) {
   // 1. Estado Centralizado de Filtros
   const [filtros, setFiltros] = useState({
     busqueda: '',
@@ -118,10 +118,17 @@ export default function Catalogo({ onNavigateToLogin, onNavigateToDetail }) {
               <a className="text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-inverse-primary transition-colors pb-1 text-label-lg font-label-lg" href="#">Mis Préstamos</a>
             </div>
             <div className="flex items-center pl-3 border-l border-outline-variant/40">
-              <button type="button" onClick={onNavigateToLogin} className="inline-flex items-center gap-2 px-3 py-1.5 rounded border border-outline-variant/60 text-primary dark:text-inverse-primary hover:bg-surface-container-high transition-colors font-label-md text-label-md font-semibold">
+              {userName ? (
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded border border-outline-variant/60 text-primary dark:text-inverse-primary font-label-md text-label-md font-semibold">
+                  <span className="material-symbols-outlined text-[18px]">person</span>
+                  <span>{userName}</span>
+                </span>
+              ) : (
+                <button type="button" onClick={onNavigateToLogin} className="inline-flex items-center gap-2 px-3 py-1.5 rounded border border-outline-variant/60 text-primary dark:text-inverse-primary hover:bg-surface-container-high transition-colors font-label-md text-label-md font-semibold">
                 <span className="material-symbols-outlined text-[18px]">person</span>
                 <span>Iniciar Sesión</span>
-              </button>
+                </button>
+              )}
             </div>
           </nav>
         </div>
