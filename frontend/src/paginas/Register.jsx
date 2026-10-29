@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { User, Mail, Lock, Eye, EyeOff, ArrowRight, BookOpen, CheckCircle2, AlertCircle } from 'lucide-react';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 export default function Register({ onReturnToLogin }) {
   const [formData, setFormData] = useState({
     fullName: '',
@@ -61,7 +63,7 @@ export default function Register({ onReturnToLogin }) {
 
     try {
       // Petición HTTP a la API REST (Backend Express / Node.js)
-      const response = await fetch('http://localhost:5000/api/auth/register', {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -79,7 +81,7 @@ export default function Register({ onReturnToLogin }) {
 
       setSuccessMessage('¡Cuenta y Carné Digital creados con éxito! Redirigiendo...');
       setTimeout(() => {
-        window.location.href = '/login';
+        onReturnToLogin?.();
       }, 2000);
     } catch (error) {
       setErrorMessage(error.message);

@@ -1,12 +1,16 @@
 import { useState } from 'react';
-import { Mail, Lock, ExternalLink, ArrowRight, BookOpen, Clock, ShieldCheck } from 'lucide-react';
+import { Mail, Lock, ExternalLink, ArrowRight, BookOpen, Clock, ShieldCheck, AlertCircle } from 'lucide-react';
 
-export default function Login({ onForgotPassword, onRegister }) {
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+export default function Login({ onForgotPassword, onRegister, onNavigateToCatalog }) {
   const [formData, setFormData] = useState({
     identifier: '',
     password: '',
     rememberMe: false,
   });
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -16,10 +20,37 @@ export default function Login({ onForgotPassword, onRegister }) {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Iniciando sesión con:', formData);
-    // Aquí invocas el servicio de autenticación hacia tu API Backend (Node.js/Express)
+    setErrorMessage('');
+    setLoading(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          identifier: formData.identifier.trim(),
+          password: formData.password,
+        }),
+      });
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(data?.error || 'No se pudo iniciar sesión. Verifica tus credenciales.');
+      }
+
+      onNavigateToCatalog?.(
+        data?.user?.user_metadata?.full_name ||
+        data?.user?.user_metadata?.name ||
+        data?.user?.email ||
+        formData.identifier.trim()
+      );
+    } catch (error) {
+      setErrorMessage(error.message || 'No se pudo conectar con el servicio de autenticación.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -55,6 +86,13 @@ export default function Login({ onForgotPassword, onRegister }) {
             <p className="text-stone-600 text-sm mb-6 leading-relaxed">
               Ingresa con tu carné de lector, cuenta institucional o credencial de investigación histórica.
             </p>
+
+            {errorMessage && (
+              <div role="alert" className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 flex items-center gap-2 text-xs text-red-700">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Campo: Identificador o Correo */}
@@ -128,10 +166,11 @@ export default function Login({ onForgotPassword, onRegister }) {
               {/* Botón de Submit */}
               <button
                 type="submit"
-                className="w-full py-3 bg-[#8C4A00] hover:bg-[#733D00] text-amber-50 font-semibold text-sm rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 group cursor-pointer"
+                disabled={loading}
+                className="w-full py-3 bg-[#8C4A00] hover:bg-[#733D00] text-amber-50 font-semibold text-sm rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 group cursor-pointer disabled:opacity-50"
               >
-                Iniciar Sesión
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                {loading ? 'Validando...' : 'Iniciar Sesión'}
+                {!loading && <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />}
               </button>
             </form>
 
