@@ -7,14 +7,16 @@ import EstablecerNuevaContrasena from './paginas/EstablecerNuevaContrasena';
 // Nuevas importaciones
 import Catalogo from './paginas/Catalogo';
 import DetalleLibro from './paginas/DetalleLibro';
+import DashBoardAdmin from './paginas/dashBoardAdmin';
+import CatalogoAdmin from './paginas/catalogoAdmin';
+import FormularioDatosNuevoLibro from './paginas/formularioDatosNuevoLibro';
 
 export default function App() {
   const [selectedBook, setSelectedBook] = useState(null);
   const [userName, setUserName] = useState('');
   const [currentScreen, setCurrentScreen] = useState(() => {
     const recoveryType = new URLSearchParams(window.location.hash.slice(1)).get('type');
-    // Modificamos el valor por defecto: si no es recuperación, muestra el catálogo
-    return recoveryType === 'recovery' ? 'establecer-password' : 'catalogo';
+    return recoveryType === 'recovery' ? 'establecer-password' : 'dashboard-admin';
   });
 
   const returnToLogin = () => {
@@ -24,6 +26,16 @@ export default function App() {
 
   return (
     <div>
+      {currentScreen === 'dashboard-admin' && (
+        <DashBoardAdmin onNavigateToCatalog={() => setCurrentScreen('catalogo-admin')} onNavigateToNewBook={() => setCurrentScreen('nuevo-libro')} />
+      )}
+      {currentScreen === 'catalogo-admin' && (
+        <CatalogoAdmin onNavigateToDashboard={() => setCurrentScreen('dashboard-admin')} onNavigateToNewBook={() => setCurrentScreen('nuevo-libro')} />
+      )}
+      {currentScreen === 'nuevo-libro' && (
+        <FormularioDatosNuevoLibro onNavigateToDashboard={() => setCurrentScreen('dashboard-admin')} onNavigateToCatalog={() => setCurrentScreen('catalogo-admin')} />
+      )}
+
       {/* Vistas Principales */}
       {currentScreen === 'catalogo' && (
         <Catalogo

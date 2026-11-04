@@ -67,18 +67,36 @@ export default {
         "space-md": "1rem",
         "space-xs": "0.25rem"
       },
+      borderRadius: {
+        DEFAULT: "0.125rem",
+        lg: "0.25rem",
+        xl: "0.5rem"
+      },
       fontFamily: {
-        "label-lg": ["Manrope"],
-        "headline-md": ["Newsreader"],
-        "body-sm": ["Manrope"],
-        "headline-sm": ["Newsreader"],
-        "body-md": ["Literata"],
-        "headline-lg": ["Newsreader"],
-        "display-lg-mobile": ["Newsreader"],
-        "label-sm": ["Manrope"],
-        "label-md": ["Manrope"],
-        "body-lg": ["Literata"],
-        "display-lg": ["Newsreader"]
+        "label-lg": ["Manrope", "sans-serif"],
+        "headline-md": ["Newsreader", "serif"],
+        "body-sm": ["Manrope", "sans-serif"],
+        "headline-sm": ["Newsreader", "serif"],
+        "body-md": ["Literata", "serif"],
+        "headline-lg": ["Newsreader", "serif"],
+        "display-lg-mobile": ["Newsreader", "serif"],
+        "label-sm": ["Manrope", "sans-serif"],
+        "label-md": ["Manrope", "sans-serif"],
+        "body-lg": ["Literata", "serif"],
+        "display-lg": ["Newsreader", "serif"]
+      },
+      fontSize: {
+        "display-lg": ["48px", { lineHeight: "56px", letterSpacing: "-0.02em", fontWeight: "600" }],
+        "label-md": ["12px", { lineHeight: "16px", letterSpacing: "0.02em", fontWeight: "600" }],
+        "headline-md": ["24px", { lineHeight: "32px", fontWeight: "500" }],
+        "body-lg": ["18px", { lineHeight: "30px", fontWeight: "400" }],
+        "headline-sm": ["20px", { lineHeight: "28px", fontWeight: "600" }],
+        "body-sm": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+        "headline-lg": ["32px", { lineHeight: "40px", letterSpacing: "-0.01em", fontWeight: "500" }],
+        "body-md": ["16px", { lineHeight: "26px", fontWeight: "400" }],
+        "display-lg-mobile": ["36px", { lineHeight: "44px", letterSpacing: "-0.01em", fontWeight: "600" }],
+        "label-lg": ["14px", { lineHeight: "20px", letterSpacing: "0.01em", fontWeight: "600" }],
+        "label-sm": ["10px", { lineHeight: "14px", letterSpacing: "0.04em", fontWeight: "700" }]
       }
     },
   },
