@@ -8,6 +8,12 @@ const formatNumber = (value) => {
 const formatText = (value) =>
   value === null || value === undefined || value === '' ? 'Dato no disponible' : value;
 
+const formatDate = (value) => {
+  if (!value) return 'Dato no disponible';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 'Dato no disponible' : date.toLocaleDateString('es-MX');
+};
+
 const bookStatusStyles = {
   disponible: 'bg-emerald-50 text-emerald-800 border-emerald-200',
   prestamo: 'bg-amber-50 text-amber-900 border-amber-200',
@@ -19,10 +25,14 @@ export default function CatalogoAdmin({
   onNavigateToNewBook,
   catalogData = {},
   libros = [],
+  onDeleteBook,
+  onEditBook,
 }) {
   const catalogBooks = Array.isArray(libros) ? libros : [];
   const [selectedBooks, setSelectedBooks] = useState([]);
   const [deleteBook, setDeleteBook] = useState(null);
+  const [deleteError, setDeleteError] = useState('');
+  const [deleting, setDeleting] = useState(false);
   const allBooksSelected = catalogBooks.length > 0 && selectedBooks.length === catalogBooks.length;
   const administrator = catalogData?.administrador ?? {};
   const totalPages = Math.max(0, Number(catalogData?.totalPaginas) || 0);
@@ -52,12 +62,28 @@ export default function CatalogoAdmin({
     setSelectedBooks(isSelected ? catalogBooks.map((_, index) => index) : []);
   };
 
-  const openDeleteModal = (title, signatura) => setDeleteBook({ title, signatura });
-  const closeDeleteModal = () => setDeleteBook(null);
+  const openDeleteModal = (book) => {
+    setDeleteError('');
+    setDeleteBook(book);
+  };
+  const closeDeleteModal = () => {
+    setDeleteError('');
+    setDeleteBook(null);
+  };
 
-  const confirmDeletionAction = () => {
-    window.alert('Registro eliminado del acervo general y archivado en la bóveda de expurgo.');
-    closeDeleteModal();
+  const confirmDeletionAction = async () => {
+    if (!deleteBook?.id || !onDeleteBook) return;
+
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      await onDeleteBook(deleteBook.id);
+      closeDeleteModal();
+    } catch (error) {
+      setDeleteError(error.message || 'No se pudo eliminar el libro.');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -160,12 +186,13 @@ export default function CatalogoAdmin({
 
 
 
-<section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+<section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
 {[
   { label: 'Total Obras Catalogadas', value: catalogData?.totalObras, unit: 'títulos', change: `+${formatNumber(catalogData?.obrasNuevasMes)} ingresados este mes`, icon: 'library_books', changeIcon: 'trending_up' },
-  { label: 'Fondo Digital Activo', value: catalogData?.obrasDigitales, unit: 'obras', change: `${formatNumber(catalogData?.porcentajeOcr)}% con transcripción OCR`, icon: 'devices', changeIcon: 'verified' },
-  { label: 'Ejemplares Físicos Custodiados', value: catalogData?.ejemplaresFisicos, unit: 'volúmenes', change: `${formatNumber(catalogData?.salasHistoricas)} salas históricas`, icon: 'inventory_2', changeIcon: 'shelves' },
-  { label: `Bajas Registradas (Año ${formatText(catalogData?.anioBajas)})`, value: catalogData?.bajasRegistradas, unit: 'obras', change: 'Retiradas', icon: 'delete_sweep', changeIcon: 'archive' },
+  { label: 'Obras en formato digital', value: catalogData?.obrasDigitales, unit: 'títulos', change: `${formatNumber(catalogData?.archivosDigitalesCargados)} archivos cargados`, icon: 'devices', changeIcon: 'verified' },
+  { label: 'Obras con ejemplares físicos', value: catalogData?.obrasFisicas, unit: 'títulos', change: 'Con copias en inventario', icon: 'inventory_2', changeIcon: 'shelves' },
+  { label: 'Ejemplares físicos registrados', value: catalogData?.ejemplaresFisicos, unit: 'copias', change: 'En inventario', icon: 'inventory_2', changeIcon: 'shelves' },
+  { label: 'Obras activas', value: catalogData?.obrasActivas, unit: 'títulos', change: 'Disponibles en el catálogo', icon: 'auto_stories', changeIcon: 'verified' },
 ].map((metric) => (
   <div key={metric.label} className="p-5 bg-surface rounded border border-outline-variant/30 shadow-[0_2px_8px_-2px_rgba(46,31,20,0.05)] flex items-center justify-between">
     <div>
@@ -277,7 +304,7 @@ export default function CatalogoAdmin({
             <span className="material-symbols-outlined text-[16px]">{book?.formatoIcono || 'menu_book'}</span>
             <span>{formatText(book?.formato)}</span>
           </div>
-          <span className="text-label-sm font-label-sm text-outline">{formatNumber(book?.copiasDisponibles)} de {formatNumber(book?.copiasTotales)} disponibles ({formatText(book?.ubicacion)})</span>
+          <span className="text-label-sm font-label-sm text-outline">{formatNumber(book?.copiasTotales)} ejemplares registrados ({formatText(book?.ubicacion)})</span>
         </div>
       </td>
       <td className="py-3.5 px-4">
@@ -286,16 +313,16 @@ export default function CatalogoAdmin({
           {formatText(book?.estado)}
         </span>
       </td>
-      <td className="py-3.5 px-4 text-on-surface-variant text-label-md font-label-md">{formatText(book?.fechaIngreso)}</td>
+      <td className="py-3.5 px-4 text-on-surface-variant text-label-md font-label-md">{formatDate(book?.fechaIngreso)}</td>
       <td className="py-3.5 px-4 text-right">
         <div className="flex items-center justify-end gap-1">
-          <button className="p-1.5 text-on-surface-variant hover:text-primary hover:bg-surface-container rounded" title="Editar Ficha Bibliográfica" type="button">
+          <button className="p-1.5 text-on-surface-variant hover:text-primary hover:bg-surface-container rounded" onClick={() => onEditBook?.(book)} title="Editar Ficha Bibliográfica" type="button">
             <span className="material-symbols-outlined text-[18px]">edit</span>
           </button>
           <button className="p-1.5 text-on-surface-variant hover:text-primary hover:bg-surface-container rounded" title="Ver Ficha / Descargar MARC21" type="button">
             <span className="material-symbols-outlined text-[18px]">visibility</span>
           </button>
-          <button className="p-1.5 text-error hover:bg-error-container/40 rounded transition-colors" onClick={() => openDeleteModal(`${formatText(book?.titulo)} (${formatText(book?.edicion)})`, formatText(book?.signatura))} title="Eliminar Obra del Catálogo" type="button">
+          <button className="p-1.5 text-error hover:bg-error-container/40 rounded transition-colors" onClick={() => openDeleteModal(book)} title="Eliminar Obra del Catálogo" type="button">
             <span className="material-symbols-outlined text-[18px]">delete</span>
           </button>
         </div>
@@ -348,7 +375,7 @@ export default function CatalogoAdmin({
             Confirmar eliminación de obra
           </h3>
 <p className="text-body-sm font-body-sm text-on-surface-variant mt-1.5">
-            Está a punto de retirar <strong className="text-primary font-bold">{deleteBook?.title}</strong> [Signatura: <span className="font-mono font-semibold">{deleteBook?.signatura}</span>] del catálogo general de la institución.
+            Está a punto de eliminar <strong className="text-primary font-bold">{deleteBook?.titulo}</strong> del catálogo general de la institución.
           </p>
 </div>
 </div>
@@ -368,13 +395,15 @@ export default function CatalogoAdmin({
 </div>
 </div>
 
+{deleteError && <p role="alert" className="mt-4 text-sm text-error">{deleteError}</p>}
+
 <div className="mt-6 flex flex-col sm:flex-row items-center justify-end gap-3">
 <button className="w-full sm:w-auto px-4 py-2 border border-outline-variant/80 text-primary hover:bg-surface-container rounded font-label-md text-label-md transition-colors" onClick={closeDeleteModal}>
           Cancelar
         </button>
-<button className="w-full sm:w-auto px-4 py-2 bg-error text-on-error hover:bg-[#8f1313] rounded font-label-md text-label-md shadow-sm transition-colors flex items-center justify-center gap-2" onClick={confirmDeletionAction}>
+<button className="w-full sm:w-auto px-4 py-2 bg-error text-on-error hover:bg-[#8f1313] rounded font-label-md text-label-md shadow-sm transition-colors flex items-center justify-center gap-2" disabled={deleting} onClick={confirmDeletionAction}>
 <span className="material-symbols-outlined text-[18px]" data-icon="delete_forever">delete_forever</span>
-<span className="">Confirmar Eliminación Definitiva</span>
+<span className="">{deleting ? 'Eliminando...' : 'Confirmar Eliminación Definitiva'}</span>
 </button>
 </div>
 </div>

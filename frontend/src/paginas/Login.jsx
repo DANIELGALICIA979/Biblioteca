@@ -40,12 +40,20 @@ export default function Login({ onForgotPassword, onRegister, onNavigateToCatalo
         throw new Error(data?.error || 'No se pudo iniciar sesión. Verifica tus credenciales.');
       }
 
-      onNavigateToCatalog?.(
-        data?.user?.user_metadata?.full_name ||
-        data?.user?.user_metadata?.name ||
-        data?.user?.email ||
-        formData.identifier.trim()
-      );
+      const role = data?.role;
+      if (!['administrador', 'lector'].includes(role)) {
+        throw new Error('El servidor no devolvió un rol válido para esta cuenta. Intenta de nuevo o contacta al administrador.');
+      }
+
+      onNavigateToCatalog?.({
+        nombre: data?.displayName ||
+          data?.user?.user_metadata?.full_name ||
+          data?.user?.user_metadata?.name ||
+          data?.user?.email ||
+          formData.identifier.trim(),
+        role,
+        accessToken: data?.session?.access_token,
+      });
     } catch (error) {
       setErrorMessage(error.message || 'No se pudo conectar con el servicio de autenticación.');
     } finally {
@@ -54,9 +62,9 @@ export default function Login({ onForgotPassword, onRegister, onNavigateToCatalo
   };
 
   return (
-    <div className="login-page bg-[#FDFBF7] font-sans text-stone-800">
+    <div className="login-page flex min-h-screen flex-col bg-[#FDFBF7] font-sans text-stone-800">
       {/* Encabezado Superior */}
-      <header className="login-header z-10 px-8 py-3 flex justify-between items-center w-full">
+      <header className="login-header z-10 flex w-full items-center justify-between px-4 py-3 sm:px-8">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-[#5A3811] text-amber-100 rounded-md">
             <BookOpen className="w-6 h-6" />
@@ -77,8 +85,8 @@ export default function Login({ onForgotPassword, onRegister, onNavigateToCatalo
       </header>
 
       {/* Contenedor Principal en Tarjeta Solapada */}
-      <main className="login-main">
-        <div className="bg-white rounded-2xl shadow-xl border border-stone-200/80 max-w-5xl w-full grid grid-cols-1 md:grid-cols-12 overflow-hidden min-h-[600px]">
+      <main className="login-main flex w-full flex-1 items-center justify-center px-4 py-8">
+        <div className="mx-auto grid min-h-[600px] w-full max-w-5xl grid-cols-1 overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-xl md:grid-cols-12">
           
           {/* Columna Izquierda: Formulario de Autenticación */}
           <div className="md:col-span-7 p-8 md:p-12 flex flex-col justify-center">

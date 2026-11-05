@@ -3,6 +3,8 @@ const formatNumber = (value) => {
   return Number.isFinite(number) ? number.toLocaleString('es-MX') : '0';
 };
 
+const formatKnownNumber = (value) => (value === null || value === undefined ? 'N/D' : formatNumber(value));
+
 const formatText = (value) =>
   value === null || value === undefined || value === '' ? 'Dato no disponible' : value;
 
@@ -20,9 +22,9 @@ export default function DashBoardAdmin({
 }) {
   const loans = Array.isArray(prestamosRecientes) ? prestamosRecientes : [];
   const administrator = dashboardData?.administrador ?? {};
-  const storageUsage = Math.min(
+  const digitalCoverage = Math.min(
     100,
-    Math.max(0, Number(dashboardData?.porcentajeAlmacenamiento) || 0),
+    Math.max(0, Number(dashboardData?.porcentajeObrasDigitales) || 0),
   );
   return (
     <div className="bg-surface text-on-surface antialiased min-h-screen flex flex-col font-body-sm selection:bg-secondary-fixed selection:text-on-secondary-fixed">
@@ -107,34 +109,34 @@ export default function DashBoardAdmin({
   {
     label: 'Total Obras en Catálogo',
     value: formatNumber(dashboardData?.totalObras),
-    change: `+${formatNumber(dashboardData?.obrasNuevasMes)} mes`,
+    change: `${formatKnownNumber(dashboardData?.obrasNuevasMes)} este mes`,
     icon: 'library_books',
     details: [
-      [formatNumber(dashboardData?.obrasDigitales), 'Digitales'],
-      [formatNumber(dashboardData?.obrasFisicas), 'Físicos'],
+      [formatKnownNumber(dashboardData?.obrasDigitales), 'Digitales'],
+      [formatKnownNumber(dashboardData?.obrasFisicas), 'Físicos'],
     ],
   },
   {
-    label: 'Préstamos Activos',
-    value: formatNumber(dashboardData?.prestamosActivos),
-    change: 'en curso',
+    label: 'Obras Activas',
+    value: formatKnownNumber(dashboardData?.obrasActivas),
+    change: 'en catálogo',
     icon: 'auto_stories',
     details: [
-      [formatNumber(dashboardData?.prestamosDigitales), 'Digitales'],
-      [formatNumber(dashboardData?.prestamosEnSala), 'En Sala'],
+      [formatKnownNumber(dashboardData?.obrasDisponibles), 'Con ejemplares'],
+      [formatKnownNumber(dashboardData?.totalObras), 'En total'],
     ],
   },
   {
     label: 'Lectores Registrados',
-    value: formatNumber(dashboardData?.lectoresRegistrados),
-    change: `+${formatNumber(dashboardData?.lectoresNuevosSemana)} sem`,
+    value: formatKnownNumber(dashboardData?.lectoresRegistrados),
+    change: `+${formatKnownNumber(dashboardData?.lectoresNuevosSemana)} sem`,
     icon: 'badge',
     details: [[formatText(dashboardData?.tipoLectores), '']],
   },
   {
-    label: 'Devoluciones Próximas',
-    value: formatNumber(dashboardData?.devolucionesProximas),
-    change: `${formatNumber(dashboardData?.prestamosAtrasados)} con atraso`,
+    label: 'Préstamos Activos',
+    value: formatKnownNumber(dashboardData?.prestamosActivos),
+    change: 'sin devolución registrada',
     icon: 'event_upcoming',
     centered: true,
   },
@@ -279,23 +281,24 @@ export default function DashBoardAdmin({
 
 <div className="bg-surface-container-lowest p-5 rounded-xl border border-[#4A3324]/10 shadow-[0_2px_8px_-2px_rgba(46,31,20,0.05)]">
 <div className="flex items-center justify-between mb-3">
-<h3 className="font-headline-sm text-headline-sm text-primary font-semibold">Salud del Repositorio Digital</h3>
+<h3 className="font-headline-sm text-headline-sm text-primary font-semibold">Recursos del catálogo</h3>
 <span className="inline-flex items-center gap-1 text-[11px] font-label-sm text-[#285933] bg-[#EAF2EC] px-2 py-0.5 rounded-full font-semibold">
-<span className="w-1.5 h-1.5 rounded-full bg-[#285933]"></span> {formatText(dashboardData?.estadoRepositorio)}
+<span className="w-1.5 h-1.5 rounded-full bg-[#285933]"></span> Datos de biblioteca
             </span>
 </div>
 
 <div className="mb-4">
 <div className="flex justify-between text-xs font-label-md mb-1.5">
-<span className="text-on-surface-variant">Almacenamiento en Servidores de Preservación</span>
-<span className="font-semibold text-primary">{formatNumber(dashboardData?.almacenamientoUsado)} TB / {formatNumber(dashboardData?.almacenamientoTotal)} TB</span>
+<span className="text-on-surface-variant">Títulos marcados EPUB/PDF</span>
+<span className="font-semibold text-primary">{formatNumber(dashboardData?.obrasDigitales)} / {formatNumber(dashboardData?.totalObras)}</span>
 </div>
 
 <div className="w-full h-2.5 bg-[#EFE8DC] rounded-full overflow-hidden">
-<div className="h-full bg-secondary rounded-full" style={{ width: `${storageUsage}%` }}></div>
+<div className="h-full bg-secondary rounded-full" style={{ width: `${digitalCoverage}%` }}></div>
 </div>
 <div className="flex justify-between items-center text-[11px] text-on-surface-variant mt-1.5">
-<span className="">{storageUsage}% en uso&nbsp;</span>
+<span>{digitalCoverage}% del catálogo · {formatNumber(dashboardData?.archivosDigitalesCargados)} archivos cargados</span>
+<span>{formatNumber(dashboardData?.ejemplaresFisicos)} ejemplares físicos</span>
 
 </div>
 </div>
