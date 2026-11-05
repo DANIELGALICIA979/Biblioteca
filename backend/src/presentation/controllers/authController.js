@@ -1,4 +1,5 @@
 import { createSupabaseClient, supabase } from '../../data/config/supabaseClient.js';
+import { obtenerRolUsuario } from '../../business/services/userRoleService.js';
 
 export const register = async (req, res) => {
   const { fullName, email, password } = req.body;
@@ -43,9 +44,34 @@ export const login = async (req, res) => {
       return res.status(400).json({ error: 'Credenciales inválidas. Comprueba tu correo y contraseña.' });
     }
 
+    const {
+      role,
+      perfil,
+      error: roleError,
+      errorCode: roleErrorCode,
+    } = await obtenerRolUsuario(data.user.id);
+    if (roleError) {
+      console.error('Error al consultar el rol durante el inicio de sesión:', roleError);
+      if (roleErrorCode === 'PROFILE_NOT_FOUND' || roleErrorCode === 'INVALID_PROFILE_ROLE') {
+        return res.status(403).json({
+          error: 'El perfil de esta cuenta no existe o su rol no es válido. Verifica perfiles.id y perfiles.rol.',
+        });
+      }
+
+      if (roleErrorCode === 'SERVICE_ROLE_KEY_MISSING') {
+        return res.status(503).json({ error: 'El servidor no está configurado para consultar perfiles.' });
+      }
+
+      return res.status(500).json({
+        error: 'No se pudo consultar el perfil de esta cuenta. Revisa la configuración y los permisos de Supabase.',
+      });
+    }
+
     return res.status(200).json({
       message: 'Inicio de sesión exitoso',
       user: data.user,
+      role,
+      displayName: perfil.nombre || data.user.user_metadata?.full_name || data.user.user_metadata?.name || data.user.email,
       session: data.session,
     });
   } catch (err) {
