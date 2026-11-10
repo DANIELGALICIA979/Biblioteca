@@ -22,7 +22,7 @@ const hasValue = (value) => value !== null
   && value !== ''
   && (!Array.isArray(value) || value.length > 0);
 
-export default function DetalleLibro({ bookId, initialBook, onNavigateToCatalog }) {
+export default function DetalleLibro({ bookId, initialBook, userName, onNavigateToCatalog, onNavigateToLoans, onNavigateToLogin }) {
   const [book, setBook] = useState(initialBook ?? null);
   const [loadedBookId, setLoadedBookId] = useState(null);
   const isLoading = Boolean(bookId) && String(loadedBookId) !== String(bookId);
@@ -134,33 +134,51 @@ export default function DetalleLibro({ bookId, initialBook, onNavigateToCatalog 
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-on-surface font-body-md text-body-md antialiased">
-      <header className="sticky top-0 z-40 w-full border-b border-outline-variant/30 bg-surface-container-low shadow-[0_2px_8px_-2px_rgba(46,31,20,0.05)]">
-        <div className="mx-auto flex h-16 max-w-[1360px] items-center justify-between px-gutter md:px-margin">
-          <a
-            className="flex items-center gap-2 text-headline-sm font-headline-sm font-semibold tracking-tight text-primary"
-            href="#"
-            onClick={(event) => {
-              event.preventDefault();
-              onNavigateToCatalog?.();
-            }}
-          >
-            <span className="material-symbols-outlined text-secondary" style={{ fontVariationSettings: "'FILL' 1" }}>local_library</span>
-            Biblioteca
-          </a>
-          <nav aria-label="Navegación principal" className="flex items-center gap-2 sm:gap-6">
-            <button
-              type="button"
-              onClick={onNavigateToCatalog}
-              className="border-b-2 border-secondary px-2 py-2 text-label-md font-label-md font-semibold text-primary"
-            >
-              Catálogo
+      <header className="bg-surface-container-low dark:bg-surface-dim border-b border-outline-variant/30 dark:border-outline/20 shadow-[0_2px_8px_-2px_rgba(46,31,20,0.05)] w-full sticky top-0 z-40">
+        <div className="px-gutter md:px-margin max-w-[1360px] mx-auto flex items-center justify-between h-20">
+          <div className="flex items-center gap-space-lg flex-1 max-w-2xl">
+            <button type="button" onClick={onNavigateToCatalog} className="text-headline-md font-headline-md font-semibold text-primary dark:text-inverse-primary tracking-tight flex items-center gap-2 flex-shrink-0">
+              <span className="material-symbols-outlined text-secondary" style={{ fontVariationSettings: "'FILL' 1" }}>local_library</span>
+              Biblioteca
             </button>
-            <button
-              type="button"
-              className="px-2 py-2 text-label-md font-label-md text-on-surface-variant transition-colors hover:text-primary"
-            >
-              Mis Préstamos
-            </button>
+            <div className="relative w-full max-w-md hidden sm:block">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-on-surface-variant">
+                <span className="material-symbols-outlined text-[20px]">search</span>
+              </div>
+              <input
+                aria-label="Buscar por título o autor"
+                className="w-full pl-10 pr-4 py-2 bg-surface-container-lowest border border-outline-variant/60 rounded text-body-sm font-body-sm text-on-surface placeholder:text-outline focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
+                placeholder="Buscar por título o autor."
+                type="search"
+              />
+            </div>
+          </div>
+          <nav aria-label="Navegación principal" className="flex items-center gap-space-lg">
+            <div className="hidden md:flex items-center gap-6">
+              <button type="button" onClick={onNavigateToCatalog} className="border-b-2 border-secondary text-primary dark:text-inverse-primary pb-1 font-semibold text-label-lg font-label-lg">Catálogo</button>
+              <button type="button" onClick={onNavigateToLoans} className="text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-inverse-primary transition-colors pb-1 text-label-lg font-label-lg">Mis Préstamos</button>
+              <button
+                type="button"
+                disabled
+                title={book?.titulo || 'Detalle del libro'}
+                className="max-w-56 truncate border-b-2 border-primary/20 pb-1 text-label-lg font-label-lg font-semibold text-primary"
+              >
+                {book?.titulo || 'Detalle del libro'}
+              </button>
+            </div>
+            <div className="flex items-center pl-3 border-l border-outline-variant/40">
+              {userName ? (
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded border border-outline-variant/60 text-primary dark:text-inverse-primary font-label-md text-label-md font-semibold">
+                  <span className="material-symbols-outlined text-[18px]">person</span>
+                  <span>{userName}</span>
+                </span>
+              ) : (
+                <button type="button" onClick={onNavigateToLogin} className="inline-flex items-center gap-2 px-3 py-1.5 rounded border border-outline-variant/60 text-primary dark:text-inverse-primary hover:bg-surface-container-high transition-colors font-label-md text-label-md font-semibold">
+                  <span className="material-symbols-outlined text-[18px]">person</span>
+                  <span>Iniciar Sesión</span>
+                </button>
+              )}
+            </div>
           </nav>
         </div>
       </header>
@@ -482,7 +500,7 @@ export default function DetalleLibro({ bookId, initialBook, onNavigateToCatalog 
         )}
       </main>
 
-      <footer className="mt-8 border-t border-outline-variant/30 bg-surface-container">
+      <footer className="mt-auto border-t border-outline-variant/30 bg-surface-container">
         <div className="mx-auto flex max-w-[1360px] flex-col justify-between gap-4 px-gutter py-6 text-label-sm font-label-sm text-on-surface-variant md:flex-row md:items-center md:px-margin">
           <div>
             <div className="flex items-center gap-2 font-headline-sm text-headline-sm font-semibold text-primary"><span className="material-symbols-outlined text-secondary">local_library</span>Biblioteca</div>

@@ -8,6 +8,7 @@ import DetalleLibro from './paginas/DetalleLibro';
 import DashBoardAdmin from './paginas/dashBoardAdmin';
 import CatalogoAdmin from './paginas/catalogoAdmin';
 import FormularioDatosNuevoLibro from './paginas/formularioDatosNuevoLibro';
+import PrestamosLector from './paginas/prestamosLector';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -187,6 +188,7 @@ export default function App() {
       {currentScreen === 'catalogo' && (
         <Catalogo
           userName={userName}
+          onNavigateToLoans={() => setCurrentScreen('prestamos-lector')}
           onNavigateToLogin={() => {
             if (!userName) setCurrentScreen('login');
           }}
@@ -196,11 +198,20 @@ export default function App() {
           }}
         />
       )}
+      {currentScreen === 'prestamos-lector' && (
+        <PrestamosLector
+          userName={userName}
+          onNavigateToCatalog={() => setCurrentScreen('catalogo')}
+        />
+      )}
       {currentScreen === 'detalle' && (
         <DetalleLibro
           bookId={selectedBook?.id}
           initialBook={selectedBook}
+          userName={userName}
           onNavigateToCatalog={() => setCurrentScreen('catalogo')}
+          onNavigateToLoans={() => setCurrentScreen('prestamos-lector')}
+          onNavigateToLogin={() => setCurrentScreen('login')}
         />
       )}
       {currentScreen === 'login' && (

@@ -17,7 +17,7 @@ const generosDisponibles = [
   'Terror',
 ];
 
-export default function Catalogo({ onNavigateToLogin, onNavigateToDetail, userName }) {
+export default function Catalogo({ onNavigateToLogin, onNavigateToDetail, onNavigateToLoans, userName }) {
   // 1. Estado Centralizado de Filtros
   const [filtros, setFiltros] = useState({
     busqueda: '',
@@ -90,7 +90,7 @@ export default function Catalogo({ onNavigateToLogin, onNavigateToDetail, userNa
   }, [filtros]); // El array [filtros] hace que la función se ejecute cada vez que el usuario cambia una opción
 
   return (
-    <div className="bg-background text-on-surface antialiased min-h-full flex flex-col font-body-md text-body-md selection:bg-secondary-fixed selection:text-on-secondary-fixed">
+    <div className="bg-background text-on-surface antialiased min-h-screen flex flex-col font-body-md text-body-md selection:bg-secondary-fixed selection:text-on-secondary-fixed">
       {/* HEADER */}
       <header className="bg-surface-container-low dark:bg-surface-dim border-b border-outline-variant/30 dark:border-outline/20 shadow-[0_2px_8px_-2px_rgba(46,31,20,0.05)] w-full sticky top-0 z-40">
         <div className="px-gutter md:px-margin max-w-[1360px] mx-auto flex items-center justify-between h-20">
@@ -115,7 +115,7 @@ export default function Catalogo({ onNavigateToLogin, onNavigateToDetail, userNa
           <nav className="flex items-center gap-space-lg">
             <div className="hidden md:flex items-center gap-6">
               <a className="border-b-2 border-secondary text-primary dark:text-inverse-primary pb-1 font-semibold text-label-lg font-label-lg" href="#">Catálogo</a>
-              <a className="text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-inverse-primary transition-colors pb-1 text-label-lg font-label-lg" href="#">Mis Préstamos</a>
+              <button type="button" onClick={onNavigateToLoans} className="text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-inverse-primary transition-colors pb-1 text-label-lg font-label-lg">Mis Préstamos</button>
             </div>
             <div className="flex items-center pl-3 border-l border-outline-variant/40">
               {userName ? (
@@ -134,7 +134,7 @@ export default function Catalogo({ onNavigateToLogin, onNavigateToDetail, userNa
         </div>
       </header>
 
-      <main className="flex-grow w-full max-w-[1360px] mx-auto px-gutter md:px-margin py-8">
+      <main className="flex-1 w-full max-w-[1360px] mx-auto px-gutter md:px-margin py-8">
         <div className="mb-8 border-b border-outline-variant/30 pb-8">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
             <div>
@@ -343,6 +343,19 @@ export default function Catalogo({ onNavigateToLogin, onNavigateToDetail, userNa
           </section>
         </div>
       </main>
+      <footer className="mt-auto border-t border-outline-variant/30 bg-surface-container">
+        <div className="mx-auto flex max-w-[1360px] flex-col justify-between gap-4 px-gutter py-6 text-label-sm font-label-sm text-on-surface-variant md:flex-row md:items-center md:px-margin">
+          <div>
+            <div className="flex items-center gap-2 font-headline-sm text-headline-sm font-semibold text-primary"><span className="material-symbols-outlined text-secondary">local_library</span>Biblioteca</div>
+            <p className="mt-2">© 2024 Biblioteca Digital. Todos los derechos reservados.</p>
+          </div>
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
+            <span>Horarios de Atención</span>
+            <span>Catálogo Histórico</span>
+            <span>Términos y Privacidad</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
