@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 const formatNumber = (value) => {
   const number = Number(value);
   return Number.isFinite(number) ? number.toLocaleString('es-MX') : '0';
@@ -7,6 +9,14 @@ const formatKnownNumber = (value) => (value === null || value === undefined ? 'N
 
 const formatText = (value) =>
   value === null || value === undefined || value === '' ? 'Dato no disponible' : value;
+
+const formatLoanDate = (value) => {
+  if (!value || value === 'Sin vencimiento') return formatText(value);
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? formatText(value)
+    : date.toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
+};
 
 const loanStatusStyles = {
   alDia: 'bg-[#EAF2EC] text-[#285933]',
@@ -19,13 +29,43 @@ export default function DashBoardAdmin({
   onNavigateToNewBook,
   dashboardData = {},
   prestamosRecientes = [],
+  onLoanAction,
 }) {
   const loans = Array.isArray(prestamosRecientes) ? prestamosRecientes : [];
+  const [processingLoanId, setProcessingLoanId] = useState('');
+  const [loanActionError, setLoanActionError] = useState('');
+  const [loanFilter, setLoanFilter] = useState('todos');
+  const filteredLoans = loans.filter((loan) => {
+    if (loanFilter === 'digitales') return loan?.tipo === 'Digital';
+    if (loanFilter === 'fisicos') return loan?.tipo === 'Físico';
+    if (loanFilter === 'atrasados') return loan?.estadoOriginal === 'vencido';
+    return true;
+  });
+  const loanFilters = [
+    ['todos', 'Todos'],
+    ['digitales', 'Digitales'],
+    ['fisicos', 'Físicos'],
+    ['atrasados', 'Con Atraso'],
+  ];
   const administrator = dashboardData?.administrador ?? {};
   const digitalCoverage = Math.min(
     100,
     Math.max(0, Number(dashboardData?.porcentajeObrasDigitales) || 0),
   );
+
+  const runLoanAction = async (loanId, action) => {
+    setProcessingLoanId(loanId);
+    setLoanActionError('');
+    try {
+      await onLoanAction?.(loanId, action);
+    } catch (error) {
+      console.error('Error al ejecutar una acción de préstamo:', error);
+      setLoanActionError(error.message || 'No se pudo actualizar el préstamo.');
+    } finally {
+      setProcessingLoanId('');
+    }
+  };
+
   return (
     <div className="bg-surface text-on-surface antialiased min-h-screen flex flex-col font-body-sm selection:bg-secondary-fixed selection:text-on-secondary-fixed">
 
@@ -174,14 +214,26 @@ export default function DashBoardAdmin({
 </div>
 
 <div className="inline-flex p-1 bg-surface-container rounded-lg border border-outline-variant/40 shrink-0">
-<button className="px-3 py-1 text-xs font-label-md rounded font-semibold bg-surface-container-lowest text-primary shadow-sm">Todos</button>
-<button className="px-3 py-1 text-xs font-label-md rounded text-on-surface-variant hover:text-primary transition-colors">Digitales</button>
-<button className="px-3 py-1 text-xs font-label-md rounded text-on-surface-variant hover:text-primary transition-colors">Físicos</button>
-<button className="px-3 py-1 text-xs font-label-md rounded text-on-surface-variant hover:text-primary transition-colors">Con Atraso</button>
+{loanFilters.map(([filter, label]) => (
+  <button
+    key={filter}
+    aria-pressed={loanFilter === filter}
+    className={`px-3 py-1 text-xs font-label-md rounded transition-colors ${
+      loanFilter === filter
+        ? 'font-semibold bg-surface-container-lowest text-primary shadow-sm'
+        : 'text-on-surface-variant hover:text-primary'
+    }`}
+    onClick={() => setLoanFilter(filter)}
+    type="button"
+  >
+    {label}
+  </button>
+))}
 </div>
 </div>
 
 <div className="overflow-x-auto mt-2">
+{loanActionError && <p role="alert" className="mb-3 rounded border border-error/30 bg-error-container/40 p-3 text-body-sm font-body-sm text-error">{loanActionError}</p>}
 <table className="w-full text-left border-collapse">
 <thead>
 <tr className="border-b border-outline-variant/30 text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
@@ -193,11 +245,13 @@ export default function DashBoardAdmin({
 <th className="py-3 px-3 text-right font-semibold">Acciones</th>
 </tr>
 </thead>
-<tbody className="divide-y divide-outline-variant/20 font-body-sm text-body-sm">{loans.length === 0 ? (
+<tbody className="divide-y divide-outline-variant/20 font-body-sm text-body-sm">{filteredLoans.length === 0 ? (
   <tr>
-    <td className="py-6 px-3 text-center text-on-surface-variant" colSpan={6}>No hay registros existentes en este momento</td>
+    <td className="py-6 px-3 text-center text-on-surface-variant" colSpan={6}>
+      {loans.length === 0 ? 'No hay registros existentes en este momento' : 'No hay préstamos que coincidan con este filtro'}
+    </td>
   </tr>
-) : loans.map((loan, index) => {
+) : filteredLoans.map((loan, index) => {
   const statusClass = loanStatusStyles[loan?.estadoTipo] ?? 'bg-surface-container text-on-surface-variant';
 
   return (
@@ -216,7 +270,7 @@ export default function DashBoardAdmin({
         </span>
       </td>
       <td className="py-3.5 px-3 text-xs text-on-surface font-label-md">
-        <div>{formatText(loan?.fechaLimite)}</div>
+        <div>{formatLoanDate(loan?.fechaLimite)}</div>
         <div className="text-[11px] text-on-surface-variant">{formatText(loan?.detalleLimite)}</div>
       </td>
       <td className="py-3.5 px-3">
@@ -227,12 +281,37 @@ export default function DashBoardAdmin({
       </td>
       <td className="py-3.5 px-3 text-right">
         <div className="inline-flex items-center gap-1">
-          <button className="p-1 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors" title="Ver ficha bibliográfica" type="button">
-            <span className="material-symbols-outlined text-lg">quick_reference_all</span>
-          </button>
-          <button className="p-1 rounded text-on-surface-variant hover:text-secondary hover:bg-surface-container transition-colors" title="Notificar al lector" type="button">
-            <span className="material-symbols-outlined text-lg">mail</span>
-          </button>
+          {loan?.estadoOriginal === 'pendiente' && (
+            <>
+              <button
+                className="rounded bg-secondary px-2 py-1 text-xs font-semibold text-on-secondary disabled:opacity-60"
+                disabled={processingLoanId === loan.id}
+                onClick={() => runLoanAction(loan.id, 'entrega')}
+                type="button"
+              >
+                Confirmar entrega
+              </button>
+              <button
+                className="rounded border border-error/30 px-2 py-1 text-xs font-semibold text-error disabled:opacity-60"
+                disabled={processingLoanId === loan.id}
+                onClick={() => runLoanAction(loan.id, 'cancelacion')}
+                type="button"
+              >
+                Cancelar
+              </button>
+            </>
+          )}
+          {['activo', 'vencido'].includes(loan?.estadoOriginal) && (
+            <button
+              className="rounded border border-outline/30 px-2 py-1 text-xs font-semibold text-primary disabled:opacity-60"
+              disabled={processingLoanId === loan.id}
+              onClick={() => runLoanAction(loan.id, 'devolucion')}
+              type="button"
+            >
+              {loan?.tipo === 'Digital' ? 'Revocar acceso' : 'Registrar devolución'}
+            </button>
+          )}
+          {processingLoanId === loan?.id && <span className="text-xs text-on-surface-variant">Actualizando…</span>}
         </div>
       </td>
     </tr>
@@ -242,7 +321,7 @@ export default function DashBoardAdmin({
 </div>
 
 <div className="pt-4 mt-2 border-t border-outline-variant/30 flex items-center justify-between">
-<span className="text-xs text-on-surface-variant font-body-sm">Mostrando {loans.length} de {formatNumber(dashboardData?.prestamosActivos)} préstamos activos registrados</span>
+<span className="text-xs text-on-surface-variant font-body-sm">Mostrando {filteredLoans.length} de {loans.length} préstamos registrados</span>
 <a className="inline-flex items-center gap-1 text-xs font-label-md font-semibold text-secondary hover:text-on-secondary-container hover:underline transition-colors" href="#">
 <span className="">Ver listado completo de Control de Préstamos Activos</span>
 <span className="material-symbols-outlined text-sm" data-icon="arrow_forward">arrow_forward</span>

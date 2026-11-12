@@ -53,6 +53,8 @@ export default function Login({ onForgotPassword, onRegister, onNavigateToCatalo
           formData.identifier.trim(),
         role,
         accessToken: data?.session?.access_token,
+        refreshToken: data?.session?.refresh_token,
+        expiresAt: data?.session?.expires_at,
       });
     } catch (error) {
       setErrorMessage(error.message || 'No se pudo conectar con el servicio de autenticación.');

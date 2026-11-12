@@ -22,7 +22,7 @@ const hasValue = (value) => value !== null
   && value !== ''
   && (!Array.isArray(value) || value.length > 0);
 
-export default function DetalleLibro({ bookId, initialBook, userName, onNavigateToCatalog, onNavigateToLoans, onNavigateToLogin }) {
+export default function DetalleLibro({ bookId, initialBook, userName, accessToken, onNavigateToCatalog, onNavigateToLoans, onNavigateToLogin }) {
   const [book, setBook] = useState(initialBook ?? null);
   const [loadedBookId, setLoadedBookId] = useState(null);
   const isLoading = Boolean(bookId) && String(loadedBookId) !== String(bookId);
@@ -30,6 +30,10 @@ export default function DetalleLibro({ bookId, initialBook, userName, onNavigate
   const [isSubmittingLoan, setIsSubmittingLoan] = useState(false);
   const [loanError, setLoanError] = useState('');
   const [loanSuccess, setLoanSuccess] = useState('');
+  const [loanSuccessCopyCode, setLoanSuccessCopyCode] = useState('');
+  const [loanAvailability, setLoanAvailability] = useState(null);
+  const [availabilityLoading, setAvailabilityLoading] = useState(true);
+  const [availabilityError, setAvailabilityError] = useState('');
   const [activeTab, setActiveTab] = useState('contents');
   const [showFullContents, setShowFullContents] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
@@ -82,23 +86,77 @@ export default function DetalleLibro({ bookId, initialBook, userName, onNavigate
     return () => abortController.abort();
   }, [bookId, initialBook]);
 
+  useEffect(() => {
+    if (!bookId) {
+      setAvailabilityLoading(false);
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    const loadAvailability = async () => {
+      setAvailabilityLoading(true);
+      setAvailabilityError('');
+      try {
+        const response = await fetch(`${API_BASE_URL}/catalogo/${encodeURIComponent(bookId)}/disponibilidad`, {
+          signal: controller.signal,
+        });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) throw new Error(payload?.error || 'No se pudo consultar la disponibilidad del libro.');
+        setLoanAvailability(payload);
+        if (!payload?.digitalDisponible && payload?.fisicoDisponible) setLoanType('physical');
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          console.error('Error al consultar disponibilidad de préstamos:', error);
+          setAvailabilityError(error.message || 'No se pudo consultar la disponibilidad del libro.');
+        }
+      } finally {
+        if (!controller.signal.aborted) setAvailabilityLoading(false);
+      }
+    };
+
+    loadAvailability();
+    return () => controller.abort();
+  }, [bookId]);
+
   const solicitarPrestamo = async () => {
     if (!book?.id) {
       setLoanError('No se puede solicitar el préstamo porque el libro no tiene un identificador válido.');
       return;
     }
 
+    if (!accessToken) {
+      setLoanError('Inicia sesión como lector para solicitar un préstamo.');
+      onNavigateToLogin?.();
+      return;
+    }
+    if (availabilityLoading || !loanAvailability) {
+      setLoanError('Espera a que se consulte la disponibilidad del libro.');
+      return;
+    }
+    if (loanType === 'digital' && !loanAvailability.digitalDisponible) {
+      setLoanError('Este libro no tiene un archivo digital disponible para préstamo.');
+      return;
+    }
+    if (loanType === 'physical' && !loanAvailability.fisicoDisponible) {
+      setLoanError('Este libro no tiene ejemplares físicos disponibles.');
+      return;
+    }
+
     setIsSubmittingLoan(true);
     setLoanError('');
     setLoanSuccess('');
+    setLoanSuccessCopyCode('');
 
     try {
       const response = await fetch(`${API_BASE_URL}/prestamos`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({
           libroId: book.id,
-          modalidad: loanType,
+          tipoPrestamo: loanType === 'physical' ? 'fisico' : 'digital',
         }),
       });
       const payload = await response.json().catch(() => null);
@@ -108,6 +166,7 @@ export default function DetalleLibro({ bookId, initialBook, userName, onNavigate
       }
 
       setLoanSuccess(payload?.message || 'La solicitud de préstamo se registró correctamente.');
+      setLoanSuccessCopyCode(payload?.prestamo?.ejemplares?.codigo_inventario || '');
     } catch (error) {
       console.error('Error al solicitar el préstamo:', error);
       setLoanError(error.message || 'No se pudo enviar la solicitud de préstamo.');
@@ -157,14 +216,6 @@ export default function DetalleLibro({ bookId, initialBook, userName, onNavigate
             <div className="hidden md:flex items-center gap-6">
               <button type="button" onClick={onNavigateToCatalog} className="border-b-2 border-secondary text-primary dark:text-inverse-primary pb-1 font-semibold text-label-lg font-label-lg">Catálogo</button>
               <button type="button" onClick={onNavigateToLoans} className="text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-inverse-primary transition-colors pb-1 text-label-lg font-label-lg">Mis Préstamos</button>
-              <button
-                type="button"
-                disabled
-                title={book?.titulo || 'Detalle del libro'}
-                className="max-w-56 truncate border-b-2 border-primary/20 pb-1 text-label-lg font-label-lg font-semibold text-primary"
-              >
-                {book?.titulo || 'Detalle del libro'}
-              </button>
             </div>
             <div className="flex items-center pl-3 border-l border-outline-variant/40">
               {userName ? (
@@ -292,7 +343,12 @@ export default function DetalleLibro({ bookId, initialBook, userName, onNavigate
               {isLoading && <p role="status" className="text-body-sm font-body-sm text-on-surface-variant">Cargando información del libro...</p>}
               {(loadError || !bookId) && <p role="alert" className="rounded border border-error/30 bg-error-container/40 p-3 text-body-sm font-body-sm text-error">{loadError || 'No se recibió el identificador del libro. Regresa al catálogo y selecciona una obra.'}</p>}
               {loanError && <p role="alert" className="rounded border border-error/30 bg-error-container/40 p-3 text-body-sm font-body-sm text-error">{loanError}</p>}
-              {loanSuccess && <p role="status" className="rounded border border-emerald-700/20 bg-emerald-50 p-3 text-body-sm font-body-sm text-emerald-800">{loanSuccess}</p>}
+              {loanSuccess && (
+                <div role="status" className="rounded border border-emerald-700/20 bg-emerald-50 p-3 text-body-sm font-body-sm text-emerald-800">
+                  <p>{loanSuccess}</p>
+                  {loanSuccessCopyCode && <p className="mt-1 font-semibold">Código de ejemplar asignado: {loanSuccessCopyCode}</p>}
+                </div>
+              )}
               <div className="flex flex-col justify-between gap-3 border-b border-outline-variant/30 pb-4 sm:flex-row sm:items-center">
                 <div>
                   <h2 className="flex items-center gap-2 text-headline-sm font-headline-sm text-primary">
@@ -312,24 +368,35 @@ export default function DetalleLibro({ bookId, initialBook, userName, onNavigate
               <fieldset className="space-y-3">
                 <legend className="text-label-md font-label-md text-primary">Selecciona la modalidad de préstamo deseada:</legend>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <label className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-4 transition-colors ${loanType === 'digital' ? 'border-secondary bg-surface-container-low' : 'border-outline-variant/60 hover:bg-surface-container-low/60'}`}>
-                    <input checked={loanType === 'digital'} className="mt-1 h-4 w-4 accent-secondary" name="loan-type" onChange={() => setLoanType('digital')} type="radio" value="digital" />
+                  <label className={`flex items-start gap-3 rounded-lg border-2 p-4 transition-colors ${loanAvailability?.digitalDisponible ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'} ${loanType === 'digital' && loanAvailability?.digitalDisponible ? 'border-secondary bg-surface-container-low' : 'border-outline-variant/60'}`}>
+                    <input checked={loanType === 'digital'} className="mt-1 h-4 w-4 accent-secondary disabled:cursor-not-allowed" disabled={availabilityLoading || !loanAvailability?.digitalDisponible} name="loan-type" onChange={() => setLoanType('digital')} type="radio" value="digital" />
                     <span className="space-y-1">
                       <span className="block text-label-md font-label-md font-bold text-primary">Modalidad 1: Préstamo Digital</span>
                       {book?.descripcion_modalidad_digital && <span className="block text-body-sm font-body-sm text-on-surface-variant">{book.descripcion_modalidad_digital}</span>}
-                      {book?.disponibilidad_digital && <span className="block text-label-sm font-label-sm text-secondary">{book.disponibilidad_digital}</span>}
+                      <span className="block text-label-sm font-label-sm text-secondary">
+                        {availabilityLoading ? 'Consultando disponibilidad...' : loanAvailability?.digitalDisponible ? `${String(book?.formato).toUpperCase()} disponible` : 'No hay archivo PDF o EPUB disponible'}
+                      </span>
                     </span>
                   </label>
-                  <label className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-4 transition-colors ${loanType === 'physical' ? 'border-secondary bg-surface-container-low' : 'border-outline-variant/60 hover:bg-surface-container-low/60'}`}>
-                    <input checked={loanType === 'physical'} className="mt-1 h-4 w-4 accent-secondary" name="loan-type" onChange={() => setLoanType('physical')} type="radio" value="physical" />
+                  <label className={`flex items-start gap-3 rounded-lg border-2 p-4 transition-colors ${loanAvailability?.fisicoDisponible ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'} ${loanType === 'physical' && loanAvailability?.fisicoDisponible ? 'border-secondary bg-surface-container-low' : 'border-outline-variant/60'}`}>
+                    <input checked={loanType === 'physical'} className="mt-1 h-4 w-4 accent-secondary disabled:cursor-not-allowed" disabled={availabilityLoading || !loanAvailability?.fisicoDisponible} name="loan-type" onChange={() => setLoanType('physical')} type="radio" value="physical" />
                     <span className="space-y-1">
                       <span className="block text-label-md font-label-md font-bold text-primary">Modalidad 2: Retiro Físico en Sala</span>
                       {book?.descripcion_modalidad_fisica && <span className="block text-body-sm font-body-sm text-on-surface-variant">{book.descripcion_modalidad_fisica}</span>}
-                      {book?.horario_recogida && <span className="block text-label-sm font-label-sm text-secondary">{book.horario_recogida}</span>}
+                      <span className="block text-label-sm font-label-sm text-secondary">
+                        {availabilityLoading ? 'Consultando disponibilidad...' : loanAvailability?.fisicoDisponible ? `${loanAvailability.ejemplaresDisponibles} ejemplar(es) disponible(s)` : 'No hay ejemplares físicos disponibles'}
+                      </span>
                     </span>
                   </label>
                 </div>
               </fieldset>
+
+              {availabilityError && <p role="alert" className="rounded border border-error/30 bg-error-container/40 p-3 text-body-sm font-body-sm text-error">{availabilityError}</p>}
+              {loanType === 'physical' && loanAvailability?.fisicoDisponible && (
+                <div className="space-y-2">
+                  <p className="text-label-sm font-label-sm text-on-surface-variant">Se asignará automáticamente un ejemplar disponible. La reserva dura 3 días hábiles; el plazo de 15 días inicia cuando el administrador confirma la entrega.</p>
+                </div>
+              )}
 
               <div className="flex flex-col items-stretch justify-between gap-4 pt-1 sm:flex-row sm:items-center">
                 {book?.condiciones_prestamo && (
@@ -338,7 +405,7 @@ export default function DetalleLibro({ bookId, initialBook, userName, onNavigate
                     {book.condiciones_prestamo}
                   </p>
                 )}
-                <button type="button" disabled={isSubmittingLoan || !book?.id} onClick={solicitarPrestamo} className="flex items-center justify-center gap-2 rounded bg-[#D97706] px-6 py-3 font-label-md text-label-md font-semibold text-white shadow-md transition-colors hover:bg-[#C25E00] disabled:cursor-not-allowed disabled:opacity-60">
+                <button type="button" disabled={isSubmittingLoan || !book?.id || availabilityLoading || !loanAvailability || (loanType === 'digital' ? !loanAvailability.digitalDisponible : !loanAvailability.fisicoDisponible)} onClick={solicitarPrestamo} className="flex items-center justify-center gap-2 rounded bg-[#D97706] px-6 py-3 font-label-md text-label-md font-semibold text-white shadow-md transition-colors hover:bg-[#C25E00] disabled:cursor-not-allowed disabled:opacity-60">
                   <span className="material-symbols-outlined text-lg">file_download</span>
                   {isSubmittingLoan ? 'Enviando solicitud...' : 'Solicitar Préstamo'}
                 </button>
