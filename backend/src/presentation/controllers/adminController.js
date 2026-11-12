@@ -527,7 +527,7 @@ export const obtenerEstadisticas = async (req, res) => {
         .gte('created_at', weekStart),
       supabaseAdmin.from('prestamos')
         .select('id', { count: 'exact', head: true })
-        .is('fecha_devolucion', null),
+        .in('estado', ['activo', 'vencido']),
     ]);
 
     const queries = [

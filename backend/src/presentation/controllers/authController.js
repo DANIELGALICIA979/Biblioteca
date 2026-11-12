@@ -1,6 +1,60 @@
 import { createSupabaseClient, supabase } from '../../data/config/supabaseClient.js';
 import { obtenerRolUsuario } from '../../business/services/userRoleService.js';
 
+export const refreshSession = async (req, res) => {
+  const { refreshToken } = req.body ?? {};
+  if (typeof refreshToken !== 'string' || !refreshToken.trim()) {
+    return res.status(400).json({ error: 'Se requiere un token de renovación válido.' });
+  }
+
+  try {
+    const refreshClient = createSupabaseClient({
+      auth: {
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+        persistSession: false,
+      },
+    });
+    const { data, error } = await refreshClient.auth.refreshSession({
+      refresh_token: refreshToken,
+    });
+
+    if (error || !data.session || !data.user) {
+      return res.status(401).json({ error: 'La sesión expiró. Inicia sesión nuevamente.' });
+    }
+
+    const {
+      role,
+      perfil,
+      error: roleError,
+      errorCode: roleErrorCode,
+    } = await obtenerRolUsuario(data.user.id);
+    if (roleError) {
+      console.error('Error al consultar el rol durante la renovación de sesión:', roleError);
+      if (roleErrorCode === 'PROFILE_NOT_FOUND' || roleErrorCode === 'INVALID_PROFILE_ROLE') {
+        return res.status(403).json({ error: 'El perfil de esta cuenta no existe o su rol no es válido.' });
+      }
+      if (roleErrorCode === 'SERVICE_ROLE_KEY_MISSING') {
+        return res.status(503).json({ error: 'El servidor no está configurado para consultar perfiles.' });
+      }
+      return res.status(500).json({ error: 'No se pudo consultar el perfil de esta cuenta.' });
+    }
+
+    return res.status(200).json({
+      role,
+      displayName: perfil.nombre
+        || data.user.user_metadata?.full_name
+        || data.user.user_metadata?.name
+        || data.user.email,
+      user: data.user,
+      session: data.session,
+    });
+  } catch (error) {
+    console.error('Error al renovar la sesión:', error);
+    return res.status(500).json({ error: 'No se pudo renovar la sesión.' });
+  }
+};
+
 export const register = async (req, res) => {
   const { fullName, email, password } = req.body;
 

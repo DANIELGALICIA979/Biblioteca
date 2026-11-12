@@ -1,4 +1,5 @@
-import { supabase } from '../../data/config/supabaseClient.js';
+import { supabase, supabaseAdmin } from '../../data/config/supabaseClient.js';
+import { processLoanTransitions } from '../../business/services/prestamoService.js';
 
 const parseListParam = (value) => {
   if (!value) return [];
@@ -175,5 +176,55 @@ export const obtenerLibroCatalogo = async (req, res) => {
   } catch (error) {
     console.error('Error al consultar el detalle del libro:', error);
     return res.status(500).json({ error: 'No se pudo consultar el libro solicitado.' });
+  }
+};
+
+export const obtenerDisponibilidadPrestamo = async (req, res) => {
+  if (!supabaseAdmin) {
+    return res.status(503).json({ error: 'El servidor no está configurado para consultar la disponibilidad de préstamos.' });
+  }
+
+  try {
+    const transitions = await processLoanTransitions();
+    if (transitions.error) {
+      console.error('Error al actualizar los préstamos antes de consultar disponibilidad:', transitions.error);
+      return res.status(500).json({ error: 'No se pudo actualizar la disponibilidad de préstamos.' });
+    }
+
+    const { data: book, error: bookError } = await supabaseAdmin
+      .from('libros')
+      .select('id, activo, archivo_path, formato')
+      .eq('id', req.params.id)
+      .maybeSingle();
+
+    if (bookError) return res.status(500).json({ error: bookError.message });
+    if (!book || !book.activo) return res.status(404).json({ error: 'No se encontró el libro activo solicitado.' });
+
+    const { data: copies, error: copiesError } = await supabaseAdmin
+      .from('ejemplares')
+      .select('id')
+      .eq('libro_id', book.id);
+    if (copiesError) return res.status(500).json({ error: copiesError.message });
+
+    const { data: occupiedCopies, error: loansError } = await supabaseAdmin
+      .from('prestamos')
+      .select('ejemplar_id')
+      .eq('libro_id', book.id)
+      .eq('tipo_prestamo', 'fisico')
+      .in('estado', ['pendiente', 'activo', 'vencido']);
+    if (loansError) return res.status(500).json({ error: loansError.message });
+
+    const occupiedIds = new Set((occupiedCopies ?? []).map((loan) => loan.ejemplar_id));
+    const ejemplaresDisponibles = (copies ?? []).filter((copy) => !occupiedIds.has(copy.id)).length;
+    const formatoDigital = String(book.formato ?? '').toLowerCase();
+
+    return res.status(200).json({
+      digitalDisponible: Boolean(book.archivo_path) && ['pdf', 'epub'].includes(formatoDigital),
+      fisicoDisponible: ejemplaresDisponibles > 0,
+      ejemplaresDisponibles,
+    });
+  } catch (error) {
+    console.error('Error al consultar disponibilidad de préstamo:', error);
+    return res.status(500).json({ error: 'No se pudo consultar la disponibilidad del libro.' });
   }
 };
