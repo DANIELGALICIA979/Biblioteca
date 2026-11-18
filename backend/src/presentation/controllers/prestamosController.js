@@ -34,6 +34,55 @@ const getLoanRelations = `
   ejemplares!prestamos_ejemplar_libro_fkey(id, codigo_inventario, ubicacion)
 `;
 
+const validateActiveDigitalLoan = async (prestamoId, usuarioId, requireEpub = true) => {
+  const { data: loan, error } = await supabaseAdmin
+    .from('prestamos')
+    .select('id, usuario_id, tipo_prestamo, estado, fecha_devolucion, fecha_limite, libros!prestamos_libro_id_fkey(archivo_path, formato)')
+    .eq('id', prestamoId)
+    .eq('usuario_id', usuarioId)
+    .maybeSingle();
+
+  if (error) return { error, status: 500, message: 'No se pudo validar el préstamo digital.' };
+  if (!loan) {
+    const { data: existingLoan, error: existenceError } = await supabaseAdmin
+      .from('prestamos')
+      .select('id')
+      .eq('id', prestamoId)
+      .maybeSingle();
+    if (existenceError) return { error: existenceError, status: 500, message: 'No se pudo validar el préstamo digital.' };
+    return {
+      status: existingLoan ? 403 : 404,
+      message: existingLoan
+        ? 'El préstamo no pertenece al usuario autenticado.'
+        : 'No se encontró el préstamo solicitado.',
+    };
+  }
+
+  if (
+    loan.tipo_prestamo !== 'digital'
+    || loan.estado !== 'activo'
+    || loan.fecha_devolucion !== null
+    || (loan.fecha_limite !== null && new Date(loan.fecha_limite).getTime() <= Date.now())
+  ) {
+    return { status: 403, message: 'El acceso está disponible solo para préstamos digitales activos y vigentes.' };
+  }
+  if (!loan.libros?.archivo_path) {
+    return { status: 409, message: 'El libro no tiene un archivo digital disponible.' };
+  }
+  if (requireEpub && String(loan.libros.formato ?? '').toLowerCase() !== 'epub') {
+    return { status: 415, message: 'El visor en línea solo admite libros EPUB.' };
+  }
+
+  return { loan };
+};
+
+const respondWithLoanValidationError = (res, result) => {
+  if (result.error) {
+    return sendDatabaseError(res, result.message, result.error);
+  }
+  return res.status(result.status).json({ error: result.message });
+};
+
 export const obtenerEjemplaresDisponibles = async (req, res) => {
   const { libroId } = req.query;
   if (!isUuid(libroId)) {
@@ -186,7 +235,7 @@ export const obtenerMisPrestamos = async (req, res) => {
   try {
     const { data, error } = await supabaseAdmin
       .from('prestamos')
-      .select(getLoanRelations)
+      .select(`${getLoanRelations}, progreso_lectura!progreso_lectura_prestamo_id_fkey(porcentaje)`)
       .eq('usuario_id', req.readerUser.id)
       .order('fecha_solicitud', { ascending: false });
     if (error) return sendDatabaseError(res, 'No se pudieron consultar tus préstamos', error);
@@ -236,17 +285,9 @@ export const obtenerArchivoPrestamo = async (req, res) => {
   if (!requireServiceRole(res)) return;
 
   try {
-    const { data: loan, error: loanError } = await supabaseAdmin
-      .from('prestamos')
-      .select('id, tipo_prestamo, estado, libros!prestamos_libro_id_fkey(archivo_path)')
-      .eq('id', req.params.id)
-      .eq('usuario_id', req.readerUser.id)
-      .maybeSingle();
-    if (loanError) return sendDatabaseError(res, 'No se pudo consultar el préstamo digital', loanError);
-    if (!loan) return res.status(404).json({ error: 'No se encontró el préstamo solicitado.' });
-    if (loan.tipo_prestamo !== 'digital' || loan.estado !== 'activo') {
-      return res.status(403).json({ error: 'El acceso está disponible solo para préstamos digitales activos.' });
-    }
+    const validation = await validateActiveDigitalLoan(req.params.id, req.readerUser.id, false);
+    if (!validation.loan) return respondWithLoanValidationError(res, validation);
+    const { loan } = validation;
 
     const [bucket, ...pathParts] = String(loan.libros?.archivo_path ?? '').split('/');
     const path = pathParts.join('/');
@@ -259,6 +300,60 @@ export const obtenerArchivoPrestamo = async (req, res) => {
     return res.status(200).json({ signedUrl: data.signedUrl, expiresIn: 300 });
   } catch (error) {
     return sendDatabaseError(res, 'No se pudo preparar el acceso al archivo digital', error);
+  }
+};
+
+export const obtenerProgresoPrestamo = async (req, res) => {
+  if (!isUuid(req.params.prestamoId)) return res.status(400).json({ error: 'El identificador del préstamo no es válido.' });
+  if (!requireServiceRole(res)) return;
+
+  try {
+    const validation = await validateActiveDigitalLoan(req.params.prestamoId, req.readerUser.id);
+    if (!validation.loan) return respondWithLoanValidationError(res, validation);
+
+    const { data, error } = await supabaseAdmin
+      .from('progreso_lectura')
+      .select('prestamo_id, ubicacion, porcentaje, updated_at')
+      .eq('prestamo_id', validation.loan.id)
+      .maybeSingle();
+    if (error) return sendDatabaseError(res, 'No se pudo consultar el progreso de lectura', error);
+    if (!data) return res.status(204).end();
+    return res.status(200).json(data);
+  } catch (error) {
+    return sendDatabaseError(res, 'No se pudo consultar el progreso de lectura', error);
+  }
+};
+
+export const guardarProgresoPrestamo = async (req, res) => {
+  if (!isUuid(req.params.prestamoId)) return res.status(400).json({ error: 'El identificador del préstamo no es válido.' });
+  if (!requireServiceRole(res)) return;
+
+  const { ubicacion, porcentaje } = req.body ?? {};
+  if (typeof ubicacion !== 'string' || !ubicacion.trim()) {
+    return res.status(400).json({ error: 'La ubicación CFI es obligatoria.' });
+  }
+  if (typeof porcentaje !== 'number' || !Number.isFinite(porcentaje) || porcentaje < 0 || porcentaje > 100) {
+    return res.status(400).json({ error: 'El porcentaje debe ser un número entre 0 y 100.' });
+  }
+
+  try {
+    const validation = await validateActiveDigitalLoan(req.params.prestamoId, req.readerUser.id);
+    if (!validation.loan) return respondWithLoanValidationError(res, validation);
+
+    const { data, error } = await supabaseAdmin
+      .from('progreso_lectura')
+      .upsert({
+        prestamo_id: validation.loan.id,
+        ubicacion: ubicacion.trim(),
+        porcentaje: Math.round(porcentaje * 100) / 100,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'prestamo_id' })
+      .select('prestamo_id, ubicacion, porcentaje, updated_at')
+      .single();
+    if (error) return sendDatabaseError(res, 'No se pudo guardar el progreso de lectura', error);
+    return res.status(200).json(data);
+  } catch (error) {
+    return sendDatabaseError(res, 'No se pudo guardar el progreso de lectura', error);
   }
 };
 
