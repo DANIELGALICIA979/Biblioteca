@@ -12,7 +12,7 @@ const generosDisponibles = [
   'Psicología',
   'Realismo mágico',
   'Romance',
-  'Romance clásico',
+  'Romance clásico', 
   'Suspenso',
   'Terror',
 ];
