@@ -32,6 +32,7 @@ const makeAuthSession = (payload, fallbackName = '') => {
 
 export default function App() {
   const [selectedBook, setSelectedBook] = useState(null);
+  const [selectedLoan, setSelectedLoan] = useState(null);
   const [readerPreview, setReaderPreview] = useState(false);
   const [userName, setUserName] = useState('');
   const [adminToken, setAdminToken] = useState('');
@@ -462,6 +463,12 @@ export default function App() {
           userName={userName}
           onNavigateToLogin={() => setCurrentScreen('login')}
           onNavigateToCatalog={() => setCurrentScreen('catalogo')}
+          onNavigateToReader={(loan) => {
+            setSelectedLoan(loan);
+            setSelectedBook(loan.libros);
+            setReaderPreview(false);
+            setCurrentScreen('visor-libro');
+          }}
         />
       )}
       {currentScreen === 'detalle' && (
@@ -484,6 +491,8 @@ export default function App() {
         <VisorLibros
           key={selectedBook?.id ?? 'visor-libro'}
           book={selectedBook}
+          prestamoId={selectedLoan?.id}
+          loanStatus={selectedLoan}
           isPreview={readerPreview}
           previewPageLimit={selectedBook?.limite_paginas_vista_previa}
           onNavigateToLoans={() => setCurrentScreen(readerPreview ? 'detalle' : 'prestamos-lector')}
