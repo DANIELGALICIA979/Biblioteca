@@ -11,7 +11,13 @@ const formatDate = (value) => {
   return new Date(value).toLocaleDateString('es-MX', { dateStyle: 'medium' });
 };
 
-export default function PrestamosLector({ userName, accessToken, onNavigateToCatalog, onNavigateToLogin }) {
+export default function PrestamosLector({
+  userName,
+  accessToken,
+  onNavigateToCatalog,
+  onNavigateToLogin,
+  onNavigateToReader,
+}) {
   const [activeLoans, setActiveLoans] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -104,6 +110,13 @@ export default function PrestamosLector({ userName, accessToken, onNavigateToCat
       setOpeningLoanId('');
     }
   };
+  const openLoan = (loan) => {
+    if (String(loan.libros?.formato ?? '').toLowerCase() === 'epub') {
+      onNavigateToReader(loan);
+      return;
+    }
+    void openDigitalLoan(loan.id);
+  };
   const activeCount = activeLoans.filter((loan) => ['activo', 'vencido'].includes(loan.estado)).length;
   const pendingCount = activeLoans.filter((loan) => loan.estado === 'pendiente').length;
   const metrics = [
@@ -122,6 +135,13 @@ export default function PrestamosLector({ userName, accessToken, onNavigateToCat
     const copyDetails = [loan.ejemplares?.codigo_inventario, loan.ejemplares?.ubicacion]
       .filter(Boolean)
       .join(' · ');
+    const progressRow = Array.isArray(loan.progreso_lectura)
+      ? loan.progreso_lectura[0]
+      : loan.progreso_lectura;
+    const progressValue = Number(progressRow?.porcentaje ?? 0);
+    const readingProgress = Number.isFinite(progressValue)
+      ? Math.min(100, Math.max(0, progressValue))
+      : 0;
 
     return {
       ...loan,
@@ -136,9 +156,9 @@ export default function PrestamosLector({ userName, accessToken, onNavigateToCat
         ? formatDate(loan.fecha_limite_retiro)
         : loan.fecha_limite ? formatDate(loan.fecha_limite) : 'Sin vencimiento',
       statusLabel: statusLabels[loan.estado] || loan.estado,
+      readingProgress,
     };
   });
-  const demoReadingProgress = 42;
 
   return (
     <div className="min-h-screen flex flex-col font-body-md text-on-background bg-background selection:bg-secondary-fixed selection:text-on-secondary-fixed">
@@ -287,17 +307,17 @@ export default function PrestamosLector({ userName, accessToken, onNavigateToCat
                             <Icon className="text-[18px] text-secondary">auto_stories</Icon>
                             Progreso de lectura
                           </span>
-                          <span className="text-label-md font-label-md font-semibold text-secondary">{demoReadingProgress}%</span>
+                          <span className="text-label-md font-label-md font-semibold text-secondary">{loan.readingProgress}%</span>
                         </div>
                         <div
-                          aria-label={`Progreso de lectura: ${demoReadingProgress}%`}
+                          aria-label={`Progreso de lectura: ${loan.readingProgress}%`}
                           aria-valuemax="100"
                           aria-valuemin="0"
-                          aria-valuenow={demoReadingProgress}
+                          aria-valuenow={loan.readingProgress}
                           className="h-2 overflow-hidden rounded-full bg-surface-container-highest"
                           role="progressbar"
                         >
-                          <div className="h-full rounded-full bg-secondary" style={{ width: `${demoReadingProgress}%` }} />
+                          <div className="h-full rounded-full bg-secondary" style={{ width: `${loan.readingProgress}%` }} />
                         </div>
                         <p className="mt-2 text-label-sm font-label-sm text-on-surface-variant">Esta barra es una vista previa; aún no guarda tu progreso.</p>
                       </div>
@@ -311,7 +331,7 @@ export default function PrestamosLector({ userName, accessToken, onNavigateToCat
                     <div className="flex flex-wrap items-center gap-3">
                       {loan.kind === 'digital' && loan.estado === 'activo' ? (
                         <>
-                          <button type="button" disabled={openingLoanId === loan.id} onClick={() => openDigitalLoan(loan.id)} className="inline-flex items-center gap-2 rounded bg-primary-container px-4 py-2.5 text-label-lg font-label-lg text-surface-container-lowest shadow-sm transition-all hover:bg-[#4A3324] disabled:opacity-60"><Icon className="text-[20px]">auto_stories</Icon><span>{openingLoanId === loan.id ? 'Abriendo...' : 'Continuar leyendo'}</span></button>
+                          <button type="button" disabled={openingLoanId === loan.id} onClick={() => openLoan(loan)} className="inline-flex items-center gap-2 rounded bg-primary-container px-4 py-2.5 text-label-lg font-label-lg text-surface-container-lowest shadow-sm transition-all hover:bg-[#4A3324] disabled:opacity-60"><Icon className="text-[20px]">auto_stories</Icon><span>{openingLoanId === loan.id ? 'Abriendo...' : 'Continuar leyendo'}</span></button>
                           <button type="button" disabled={isReturning} onClick={() => setSelectedLoan(loan)} title="Revocar tu acceso digital" className="inline-flex items-center gap-2 px-4 py-2.5 rounded border border-outline/30 bg-surface-container hover:bg-secondary-fixed/50 hover:border-secondary text-primary text-label-lg font-label-lg transition-all disabled:opacity-60"><Icon className="text-[20px] text-secondary">assignment_return</Icon><span>Devolver acceso</span></button>
                         </>
                       ) : loan.kind === 'physical' && loan.estado === 'pendiente' ? (

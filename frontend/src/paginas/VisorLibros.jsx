@@ -1,4 +1,8 @@
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
+import ePub from 'epubjs';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const AUTH_SESSION_KEY = 'biblioteca.auth-session';
 
 const themes = {
   sepia: {
@@ -34,11 +38,29 @@ function contentParagraphs(pageEntry) {
     .filter((paragraph) => typeof paragraph === 'string' && paragraph.trim());
 }
 
+function getStoredAccessToken() {
+  let session;
+  try {
+    session = JSON.parse(sessionStorage.getItem(AUTH_SESSION_KEY) || 'null');
+  } catch {
+    throw new Error('No se pudo recuperar la sesión. Inicia sesión nuevamente.');
+  }
+  if (!session?.accessToken) throw new Error('Tu sesión expiró. Inicia sesión nuevamente.');
+  return session.accessToken;
+}
+
+async function readApiResponse(response, fallbackMessage) {
+  if (response.status === 204) return null;
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(payload?.error || fallbackMessage);
+  return payload;
+}
+
 export default function VisorLibros({
   book,
+  prestamoId,
   isPreview = false,
   previewPageLimit = 5,
-  loanStatus,
   onNavigateToLoans,
 }) {
   const [activeTab, setActiveTab] = useState('toc');
@@ -49,7 +71,25 @@ export default function VisorLibros({
   const [theme, setTheme] = useState('sepia');
   const [page, setPage] = useState(1);
   const [bookmarks, setBookmarks] = useState([]);
+  const [bookmarksLoaded, setBookmarksLoaded] = useState(false);
   const [notes, setNotes] = useState([]);
+  const [readerStatus, setReaderStatus] = useState('loading');
+  const [readerError, setReaderError] = useState('');
+  const [bookmarkError, setBookmarkError] = useState('');
+  const [epubToc, setEpubToc] = useState([]);
+  const [, setEpubBuffer] = useState(null);
+  const [readingProgress, setReadingProgress] = useState(0);
+  const [epubPage, setEpubPage] = useState(1);
+  const [epubPageCount, setEpubPageCount] = useState(1);
+  const epubContainerRef = useRef(null);
+  const epubBookRef = useRef(null);
+  const renditionRef = useRef(null);
+  const currentCfiRef = useRef('');
+  const readerMountedRef = useRef(false);
+  const progressTimerRef = useRef(null);
+  const pendingProgressRef = useRef(null);
+  const saveChainRef = useRef(Promise.resolve());
+  const isEpubMode = !isPreview && Boolean(prestamoId);
   // TODO: cargar marcadores y notas con fetch al definir sus endpoints y actualizar estos estados.
   useEffect(() => {
     const desktopQuery = window.matchMedia('(min-width: 1024px)');
@@ -97,13 +137,266 @@ export default function VisorLibros({
     ...(page < pageCount ? [{ entry: nextPage, pageNumber: page + 1 }] : []),
   ];
   const hasPageContent = contentParagraphs(currentPage).length > 0 || contentParagraphs(nextPage).length > 0;
-  const loanDueDate = loanStatus?.fechaVencimiento ?? loanStatus?.fecha_vencimiento ?? loanStatus?.dueDate;
-  const loanLabel = typeof loanStatus === 'string' ? loanStatus : loanStatus?.estado ?? 'Estado del préstamo no disponible';
-  const progress = Math.min(100, Math.round((page / pageCount) * 100));
+  const progress = isEpubMode ? Math.round(readingProgress) : Math.min(100, Math.round((page / pageCount) * 100));
+  const activePage = isEpubMode ? epubPage : page;
+  const activePageCount = isEpubMode ? epubPageCount : pageCount;
+  const activePageLimit = isEpubMode ? epubPageCount : navigationPageLimit;
   const fontLabels = { serif: 'Editorial Serif', sans: 'Manrope Sans', mono: 'JetBrains Mono' };
+  const bookmarkStorageKey = prestamoId ? `biblioteca.lectura.marcadores.${prestamoId}` : '';
 
-  const changePage = (nextPage) => setPage(Math.max(1, Math.min(navigationPageLimit, Number(nextPage))));
+  useEffect(() => {
+    if (!bookmarkStorageKey) {
+      setBookmarks([]);
+      setBookmarksLoaded(true);
+      return;
+    }
+
+    setBookmarksLoaded(false);
+    try {
+      const saved = localStorage.getItem(bookmarkStorageKey);
+      const parsed = saved ? JSON.parse(saved) : [];
+      if (!Array.isArray(parsed)) throw new Error('El formato de marcadores guardados no es válido.');
+      setBookmarks(parsed.filter((bookmark) => (
+        typeof bookmark?.ubicacion === 'string' && Number.isFinite(Number(bookmark.pagina))
+      )));
+    } catch (error) {
+      console.error('Error al cargar los marcadores:', error);
+      setBookmarks([]);
+      setBookmarkError('No se pudieron cargar los marcadores guardados.');
+    } finally {
+      setBookmarksLoaded(true);
+    }
+  }, [bookmarkStorageKey]);
+
+  useEffect(() => {
+    if (!bookmarksLoaded || !bookmarkStorageKey) return;
+    try {
+      localStorage.setItem(bookmarkStorageKey, JSON.stringify(bookmarks));
+    } catch (error) {
+      console.error('Error al guardar los marcadores:', error);
+      setBookmarkError('No se pudieron guardar los marcadores en este navegador.');
+    }
+  }, [bookmarkStorageKey, bookmarks, bookmarksLoaded]);
+
+  const saveProgress = (keepalive = false) => {
+    const snapshot = pendingProgressRef.current;
+    if (!snapshot) return saveChainRef.current;
+
+    const save = async () => {
+      const token = getStoredAccessToken();
+      const response = await fetch(`${API_BASE_URL}/prestamos/${encodeURIComponent(prestamoId)}/progreso`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(snapshot),
+        keepalive,
+      });
+      await readApiResponse(response, 'No se pudo guardar el progreso de lectura.');
+      if (pendingProgressRef.current === snapshot) pendingProgressRef.current = null;
+    };
+
+    const nextSave = saveChainRef.current.catch(() => undefined).then(save);
+    saveChainRef.current = nextSave.catch((error) => {
+      console.error('Error al guardar el progreso de lectura:', error);
+      if (readerMountedRef.current) {
+        setReaderError(error.message || 'No se pudo guardar el progreso de lectura.');
+      }
+    });
+    return saveChainRef.current;
+  };
+
+  useEffect(() => {
+    if (!isEpubMode) return undefined;
+    let active = true;
+    const controller = new AbortController();
+    let token;
+    let epubBook;
+    let rendition;
+
+    const queueProgress = (location, percentage) => {
+      if (!location) return;
+      const normalizedPercentage = Math.min(100, Math.max(0, percentage));
+      pendingProgressRef.current = {
+        ubicacion: location,
+        porcentaje: Math.round(normalizedPercentage * 100) / 100,
+      };
+      setReadingProgress(normalizedPercentage);
+      if (progressTimerRef.current) window.clearTimeout(progressTimerRef.current);
+      progressTimerRef.current = window.setTimeout(() => {
+        void saveProgress();
+      }, 1000);
+    };
+
+    const handleRelocated = (location) => {
+      const cfi = location?.start?.cfi;
+      const locations = epubBookRef.current?.locations;
+      if (!cfi || !locations) return;
+
+      currentCfiRef.current = cfi;
+      const rawPercentage = Number(locations.percentageFromCfi(cfi));
+      if (!Number.isFinite(rawPercentage)) return;
+      const percentage = Math.min(100, Math.max(0, rawPercentage <= 1 ? rawPercentage * 100 : rawPercentage));
+      const locationIndex = Number(locations.locationFromCfi(cfi));
+      const total = Math.max(1, Number(locations.length()) || 1);
+      setEpubPageCount(total);
+      setEpubPage(Number.isFinite(locationIndex) ? Math.min(total, locationIndex + 1) : 1);
+      queueProgress(cfi, percentage);
+    };
+
+    const openBook = async () => {
+      try {
+        readerMountedRef.current = true;
+        setReaderStatus('loading');
+        setReaderError('');
+        token = getStoredAccessToken();
+        const headers = { Authorization: `Bearer ${token}` };
+        const progressResponse = await fetch(
+          `${API_BASE_URL}/prestamos/${encodeURIComponent(prestamoId)}/progreso`,
+          { headers, signal: controller.signal },
+        );
+        const savedProgress = await readApiResponse(progressResponse, 'No se pudo cargar el progreso de lectura.');
+        if (!active) return;
+
+        const fileResponse = await fetch(
+          `${API_BASE_URL}/prestamos/${encodeURIComponent(prestamoId)}/archivo`,
+          { headers, signal: controller.signal },
+        );
+        const filePayload = await readApiResponse(fileResponse, 'No se pudo preparar el EPUB.');
+        if (!active) return;
+        if (!filePayload?.signedUrl) throw new Error('El servidor no devolvió una URL para el EPUB.');
+
+        const epubResponse = await fetch(filePayload.signedUrl, { signal: controller.signal });
+        if (!epubResponse.ok) {
+          const storageError = await epubResponse.json().catch(() => null);
+          throw new Error(
+            storageError?.message
+              || storageError?.error
+              || `No se pudo descargar el EPUB (${epubResponse.status}).`,
+          );
+        }
+        const buffer = await epubResponse.arrayBuffer();
+        if (!active) return;
+        setEpubBuffer(buffer);
+        epubBook = ePub(buffer);
+        epubBookRef.current = epubBook;
+        await epubBook.ready;
+        await epubBook.locations.generate(1000);
+        if (!active) return;
+
+        const total = Math.max(1, Number(epubBook.locations.length()) || 1);
+        setEpubPageCount(total);
+        setEpubToc(epubBook.navigation?.toc ?? []);
+        rendition = epubBook.renderTo(epubContainerRef.current, {
+          width: '100%',
+          height: '100%',
+          spread: 'none',
+          flow: 'paginated',
+        });
+        renditionRef.current = rendition;
+        rendition.on('relocated', handleRelocated);
+        await rendition.display(savedProgress?.ubicacion || undefined);
+        if (active) setReaderStatus('ready');
+      } catch (error) {
+        if (!active) return;
+        console.error('Error al abrir el EPUB:', error);
+        setReaderError(error.message || 'No se pudo abrir el EPUB. Verifica que el archivo no esté dañado.');
+        setReaderStatus('error');
+      }
+    };
+
+    void openBook();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        if (progressTimerRef.current) window.clearTimeout(progressTimerRef.current);
+        void saveProgress(true);
+      }
+    };
+    const handleBeforeUnload = () => {
+      if (progressTimerRef.current) window.clearTimeout(progressTimerRef.current);
+      void saveProgress(true);
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      active = false;
+      readerMountedRef.current = false;
+      controller.abort();
+      if (progressTimerRef.current) window.clearTimeout(progressTimerRef.current);
+      void saveProgress(true);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      rendition?.destroy();
+      epubBook?.destroy();
+      renditionRef.current = null;
+      epubBookRef.current = null;
+    };
+  }, [isEpubMode, prestamoId]);
+
+  useEffect(() => {
+    if (!renditionRef.current) return;
+    const palette = {
+      sepia: { color: '#342418', background: '#F4EEDF' },
+      light: { color: '#111827', background: '#FFFFFF' },
+      dark: { color: '#E4D7CA', background: '#221A14' },
+    }[theme];
+    renditionRef.current.themes.default({
+      body: {
+        color: palette.color,
+        'background-color': palette.background,
+        'font-family': fontFamily === 'serif' ? 'serif' : fontFamily === 'sans' ? 'sans-serif' : 'monospace',
+        'font-size': `${fontSize}px`,
+      },
+    });
+  }, [fontFamily, fontSize, theme]);
+
+  const changePage = (nextPage) => {
+    const maxPage = isEpubMode ? epubPageCount : navigationPageLimit;
+    const boundedPage = Math.max(1, Math.min(maxPage, Number(nextPage)));
+    if (isEpubMode && epubBookRef.current && renditionRef.current) {
+      const percentage = epubPageCount <= 1 ? 0 : (boundedPage - 1) / (epubPageCount - 1);
+      const cfi = epubBookRef.current.locations.cfiFromPercentage(percentage);
+      renditionRef.current.display(cfi).catch((error) => {
+        console.error('No se pudo cambiar la ubicación del EPUB:', error);
+        setReaderError('No se pudo cambiar la ubicación del EPUB.');
+      });
+      return;
+    }
+    setPage(boundedPage);
+  };
+  const turnPage = (direction) => {
+    if (isEpubMode && renditionRef.current) {
+      const pageTurn = direction > 0
+        ? renditionRef.current.next()
+        : renditionRef.current.prev();
+      pageTurn.catch((error) => {
+        console.error('No se pudo cambiar de página en el EPUB:', error);
+        setReaderError('No se pudo cambiar de página en el EPUB.');
+      });
+      return;
+    }
+    changePage(page + direction);
+  };
   const addBookmark = () => {
+    if (isEpubMode) {
+      const location = currentCfiRef.current;
+      if (!location) {
+        setReaderError('Espera a que el EPUB termine de cargar antes de añadir un marcador.');
+        return;
+      }
+      setBookmarks((current) => current.some((bookmark) => bookmark.ubicacion === location)
+        ? current
+        : [...current, {
+          id: `${Date.now()}-${current.length}`,
+          ubicacion: location,
+          pagina: epubPage,
+          created_at: new Date().toISOString(),
+        }]);
+      return;
+    }
     setBookmarks((current) => current.some((bookmark) => pageNumberOf(bookmark, -1) === page)
       ? current
       : [...current, { id: `${page}-${Date.now()}`, pagina: page }]);
@@ -136,12 +429,12 @@ export default function VisorLibros({
             </p>
           </div>
         </div>
-          {chapters.length > 0 && chapterTitle && <div className="hidden xl:flex items-center gap-space-sm bg-surface rounded-full px-space-md py-1 shadow-[0_2px_8px_-2px_rgba(46,31,20,0.05)] border border-outline-variant/30 shrink-0">
+          {(isEpubMode || (chapters.length > 0 && chapterTitle)) && <div className="hidden xl:flex items-center gap-space-sm bg-surface rounded-full px-space-md py-1 shadow-[0_2px_8px_-2px_rgba(46,31,20,0.05)] border border-outline-variant/30 shrink-0">
           <Icon className="text-secondary text-[16px]">menu_book</Icon>
-            <span className="text-label-md font-label-md text-on-surface">{chapterTitle}</span>
+            <span className="text-label-md font-label-md text-on-surface">{isEpubMode ? 'Progreso de lectura' : chapterTitle}</span>
           <span className="w-1.5 h-1.5 rounded-full bg-secondary" />
           <span className="text-label-md font-label-md text-secondary font-bold">{progress}%</span>
-          <span className="text-body-sm font-body-sm text-on-surface-variant">Pág. {page} de {pageCount}</span>
+          <span className="text-body-sm font-body-sm text-on-surface-variant">Pág. {activePage} de {activePageCount}</span>
           </div>}
         <div className="flex w-full items-center justify-between gap-space-xs shrink-0 sm:w-auto sm:justify-end md:gap-space-sm">
           <div className="flex items-center bg-surface rounded-lg p-0.5 border border-outline-variant/40 shadow-[0_2px_8px_-2px_rgba(46,31,20,0.05)]">
@@ -213,7 +506,21 @@ export default function VisorLibros({
             {activeTab === 'toc' && (
               <div className="space-y-1">
                 <div className="pb-2"><span className="text-label-sm font-label-sm text-secondary uppercase tracking-wider">Estructura de la obra</span></div>
-                {chapters.length > 0 ? chapters.map((chapter, index) => {
+                {isEpubMode ? (
+                  epubToc.length > 0 ? epubToc.map((chapter, index) => (
+                    <button
+                      key={chapter.id ?? `${chapter.href}-${index}`}
+                      type="button"
+                      onClick={() => renditionRef.current?.display(chapter.href).catch((error) => {
+                        console.error('No se pudo abrir el capítulo EPUB:', error);
+                        setReaderError('No se pudo abrir el capítulo seleccionado.');
+                      })}
+                      className="w-full flex items-center justify-between p-2.5 rounded-lg hover:bg-surface-container transition-colors group text-left"
+                    >
+                      <span className="text-body-md font-body-md text-on-surface group-hover:text-primary">{chapter.label || chapter.title || 'Capítulo sin título'}</span>
+                    </button>
+                  )) : <p className="rounded-lg bg-surface p-3 text-body-sm font-body-sm text-on-surface-variant">Índice no disponible.</p>
+                ) : chapters.length > 0 ? chapters.map((chapter, index) => {
                   const chapterPage = pageNumberOf(chapter, index + 1);
                   const chapterName = chapter?.titulo ?? chapter?.title ?? chapter?.nombre ?? 'Capítulo sin título';
                   const numeral = chapter?.numero_romano ?? chapter?.numeral ?? chapter?.numero ?? '';
@@ -235,11 +542,26 @@ export default function VisorLibros({
             {activeTab === 'bookmarks' && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between pb-1"><span className="text-label-sm font-label-sm text-secondary uppercase tracking-wider">Marcadores ({bookmarks.length})</span><button type="button" onClick={addBookmark} className="text-label-sm font-label-sm text-secondary hover:underline">+ Añadir marcador</button></div>
+                {bookmarkError && <p role="alert" className="text-body-sm text-error">{bookmarkError}</p>}
                 {bookmarks.length > 0 ? bookmarks.map((bookmark, index) => (
-                  <div key={bookmark?.id ?? `${pageNumberOf(bookmark, index + 1)}-${index}`} className="p-3 bg-surface rounded-xl border border-outline-variant/30 shadow-[0_2px_8px_-2px_rgba(46,31,20,0.05)] space-y-1">
+                  <button
+                    key={bookmark?.id ?? `${pageNumberOf(bookmark, index + 1)}-${index}`}
+                    type="button"
+                    onClick={() => {
+                      if (bookmark?.ubicacion && renditionRef.current) {
+                        renditionRef.current.display(bookmark.ubicacion).catch((error) => {
+                          console.error('No se pudo navegar al marcador:', error);
+                          setReaderError('No se pudo abrir la ubicación del marcador.');
+                        });
+                      } else {
+                        changePage(pageNumberOf(bookmark, index + 1));
+                      }
+                    }}
+                    className="w-full text-left p-3 bg-surface rounded-xl border border-outline-variant/30 shadow-[0_2px_8px_-2px_rgba(46,31,20,0.05)] space-y-1"
+                  >
                     <div className="flex items-center justify-between"><span className="text-label-sm font-label-sm text-secondary font-bold">Página {pageNumberOf(bookmark, index + 1)}</span><span className="text-label-sm font-label-sm text-outline-variant">{bookmark?.fecha ?? bookmark?.created_at ?? ''}</span></div>
                     {(bookmark?.texto ?? bookmark?.cita ?? bookmark?.contenido) && <p className="text-body-sm font-body-sm text-on-surface line-clamp-2">{bookmark.texto ?? bookmark.cita ?? bookmark.contenido}</p>}
-                  </div>
+                  </button>
                 )) : <p className="rounded-lg bg-surface p-3 text-body-sm font-body-sm text-on-surface-variant">Aún no tienes marcadores guardados.</p>}
               </div>
             )}
@@ -256,13 +578,40 @@ export default function VisorLibros({
               </div>
             )}
           </div>
-          <div className="border-t border-outline-variant/30 bg-surface/50 p-4">
-            <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary"><Icon>{isPreview ? 'visibility' : 'menu_book'}</Icon></div><div><p className="text-label-md font-label-md text-primary">{isPreview ? 'Vista Previa' : loanLabel}</p><p className="text-body-sm font-body-sm text-outline">{isPreview ? 'Acceso de lectura limitado' : loanDueDate ? `Vence: ${loanDueDate}` : loanLabel}</p></div></div>
-          </div>
         </aside>
 
         <main className={`flex-1 overflow-y-auto flex items-center justify-center p-4 md:p-8 lg:p-12 transition-colors duration-300 ${themes[theme].canvas}`}>
-          {previewLimitReached ? (
+          {isEpubMode ? (
+            <div className={`relative w-full h-full min-h-[640px] rounded-xl border overflow-hidden ${themes[theme].book}`}>
+              <div
+                ref={epubContainerRef}
+                className={`h-full min-h-[640px] w-full ${readerStatus === 'error' ? 'hidden' : ''}`}
+              />
+              {readerStatus === 'loading' && (
+                <div role="status" className="absolute inset-0 z-10 flex items-center justify-center p-8 text-center bg-inherit">
+                  <p className="text-body-md">Cargando EPUB...</p>
+                </div>
+              )}
+              {readerStatus === 'error' && (
+                <div role="alert" className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-8 text-center">
+                  <Icon className="text-4xl text-secondary">error</Icon>
+                  <p className="text-body-md">{readerError}</p>
+                  <p className="text-body-sm text-on-surface-variant">Usa “Mis Préstamos” para regresar.</p>
+                </div>
+              )}
+              {readerStatus === 'ready' && readerError && (
+                <p role="alert" className="absolute bottom-3 left-3 right-3 rounded bg-error-container/90 p-2 text-body-sm text-error">
+                  {readerError}
+                </p>
+              )}
+            </div>
+          ) : !isPreview ? (
+            <div role="alert" className={`w-full max-w-2xl rounded-xl border p-8 text-center ${themes[theme].book}`}>
+              <Icon className="text-4xl text-secondary">lock</Icon>
+              <h2 className="mt-3 text-headline-md font-headline-md font-semibold">Préstamo necesario</h2>
+              <p className="mt-2 text-body-md">Abre el EPUB desde un préstamo digital activo.</p>
+            </div>
+          ) : previewLimitReached ? (
             <div role="status" className={`w-full max-w-2xl rounded-xl border p-8 text-center ${themes[theme].book}`}>
               <Icon className="text-4xl text-secondary">lock</Icon>
               <h2 className="mt-3 text-headline-md font-headline-md font-semibold">Fin de la vista previa</h2>
@@ -308,15 +657,15 @@ export default function VisorLibros({
 
       <footer className="w-full bg-surface-container z-30 px-space-lg py-2.5 flex flex-col md:flex-row items-center justify-between gap-3 border-t border-outline-variant/30">
         <div className="flex items-center gap-2">
-          <button type="button" disabled={page <= 1} onClick={() => changePage(page - 1)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-surface hover:bg-surface-container-high text-primary border border-outline-variant/40 text-label-md font-label-md shadow-[0_2px_8px_-2px_rgba(46,31,20,0.05)] transition-all disabled:opacity-50"><Icon className="text-[18px]">arrow_back</Icon><span>Página anterior</span></button>
+          <button type="button" disabled={activePage <= 1} onClick={() => turnPage(-1)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-surface hover:bg-surface-container-high text-primary border border-outline-variant/40 text-label-md font-label-md shadow-[0_2px_8px_-2px_rgba(46,31,20,0.05)] transition-all disabled:opacity-50"><Icon className="text-[18px]">arrow_back</Icon><span>Página anterior</span></button>
         </div>
         <div className="flex-1 max-w-2xl w-full flex items-center gap-4 px-2">
-          <span className="text-label-md font-label-md text-on-surface-variant w-14 text-right select-none">Pág. {page}</span>
-          <div className="relative flex-1 flex items-center"><input aria-label="Página actual" className="w-full h-1.5 rounded-lg appearance-none cursor-pointer focus:outline-none" max={navigationPageLimit} min="1" onChange={(event) => changePage(event.target.value)} title="Arrastra para saltar de página" type="range" value={page} /></div>
-          <span className="text-label-md font-label-md text-outline-variant w-14 select-none">{pageCount} págs.</span>
+          <span className="text-label-md font-label-md text-on-surface-variant w-14 text-right select-none">Pág. {activePage}</span>
+          <div className="relative flex-1 flex items-center"><input aria-label={isEpubMode ? 'Progreso de lectura' : 'Página actual'} className="w-full h-1.5 rounded-lg appearance-none cursor-pointer focus:outline-none" max={activePageLimit} min="1" onChange={(event) => changePage(event.target.value)} title="Arrastra para saltar de página" type="range" value={activePage} /></div>
+          <span className="text-label-md font-label-md text-outline-variant w-14 select-none">{activePageCount} págs.</span>
         </div>
         <div className="flex items-center gap-2">
-          <button type="button" disabled={page >= navigationPageLimit} onClick={() => changePage(page + 1)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary hover:bg-[#4A3324] text-surface border border-transparent text-label-md font-label-md shadow-[0_2px_8px_-2px_rgba(46,31,20,0.12)] transition-all disabled:opacity-50"><span>Página siguiente</span><Icon className="text-[18px]">arrow_forward</Icon></button>
+          <button type="button" disabled={activePage >= activePageLimit} onClick={() => turnPage(1)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary hover:bg-[#4A3324] text-surface border border-transparent text-label-md font-label-md shadow-[0_2px_8px_-2px_rgba(46,31,20,0.12)] transition-all disabled:opacity-50"><span>Página siguiente</span><Icon className="text-[18px]">arrow_forward</Icon></button>
         </div>
       </footer>
     </div>
