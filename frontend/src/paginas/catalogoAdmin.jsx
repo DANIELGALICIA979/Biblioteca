@@ -33,6 +33,7 @@ export default function CatalogoAdmin({
   const [deleteBook, setDeleteBook] = useState(null);
   const [deleteError, setDeleteError] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const allBooksSelected = catalogBooks.length > 0 && selectedBooks.length === catalogBooks.length;
   const administrator = catalogData?.administrador ?? {};
   const totalPages = Math.max(0, Number(catalogData?.totalPaginas) || 0);
@@ -90,7 +91,7 @@ export default function CatalogoAdmin({
     <div className="min-h-screen bg-background text-on-background flex flex-col font-body-md antialiased selection:bg-secondary-container selection:text-primary">
 
 <header className="w-full sticky top-0 z-40 bg-surface-container-low dark:bg-surface-dim shadow-[0_2px_8px_-2px_rgba(46,31,20,0.05)] border-b border-outline-variant/30 dark:border-outline/20">
-<div className="w-full px-gutter md:px-margin max-w-[1360px] mx-auto flex items-center justify-between h-20">
+<div className="w-full px-gutter md:px-margin max-w-[1360px] mx-auto flex items-center justify-between h-20 gap-3">
 
 <div className="flex items-center gap-space-lg">
 <div className="flex items-center gap-space-sm">
@@ -147,7 +148,29 @@ export default function CatalogoAdmin({
 </button>
 </div>
 </div>
+<button
+  type="button"
+  className="md:hidden inline-flex h-10 w-10 shrink-0 items-center justify-center rounded border border-outline-variant/50 text-primary"
+  aria-label={mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
+  aria-expanded={mobileMenuOpen}
+  aria-controls="admin-catalog-mobile-menu"
+  onClick={() => setMobileMenuOpen((open) => !open)}
+>
+  <span className="material-symbols-outlined">{mobileMenuOpen ? 'close' : 'menu'}</span>
+</button>
 </div>
+{mobileMenuOpen && (
+  <div id="admin-catalog-mobile-menu" className="md:hidden border-t border-outline-variant/30 bg-surface-container-low px-gutter py-4 space-y-4">
+    <div className="relative">
+      <span className="material-symbols-outlined absolute inset-y-0 left-3 flex items-center text-[20px] text-on-surface-variant">search</span>
+      <input aria-label="Buscar por título" className="w-full rounded border border-outline-variant/60 bg-surface-container-lowest py-2 pl-10 pr-4 text-body-sm font-body-sm text-on-surface placeholder:text-outline focus:border-secondary focus:outline-none focus:ring-1 focus:ring-secondary" placeholder="Búsqueda por título" type="search" />
+    </div>
+    <nav aria-label="Navegación móvil" className="flex flex-col gap-3 text-label-lg font-label-lg">
+      <button type="button" onClick={() => { setMobileMenuOpen(false); onNavigateToDashboard(); }} className="text-left text-on-surface-variant">Dashboard</button>
+      <span className="font-semibold text-primary">Catálogo</span>
+    </nav>
+  </div>
+)}
 </header>
 
 <main className="flex-grow w-full max-w-[1360px] mx-auto px-gutter md:px-margin py-8 flex flex-col gap-8">
@@ -230,7 +253,7 @@ export default function CatalogoAdmin({
     </div>
   </div>
   
-  <div className="flex items-center gap-3">
+  <div className="flex min-w-0 flex-wrap items-center gap-3">
     <div className="flex items-center gap-2">
       <input className="rounded border-outline text-secondary focus:ring-secondary h-4 w-4 bg-surface" id="selectAll" type="checkbox" checked={allBooksSelected} onChange={(event) => handleSelectAll(event.target.checked)} />
       <label className="text-label-md font-label-md text-on-surface-variant cursor-pointer" htmlFor="selectAll">Seleccionar todos</label>
@@ -365,7 +388,7 @@ export default function CatalogoAdmin({
 </main>
 
 <div aria-labelledby="modalTitle" aria-modal="true" className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-primary/40 backdrop-blur-sm ${deleteBook ? '' : 'hidden'}`} id="deleteModal" role="dialog">
-<div className="bg-surface rounded-xl border border-outline-variant/60 max-w-lg w-full p-6 shadow-[0_16px_40px_-8px_rgba(31,21,13,0.24)] catalog-modal-enter">
+<div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-outline-variant/60 bg-surface p-6 shadow-[0_16px_40px_-8px_rgba(31,21,13,0.24)] catalog-modal-enter">
 <div className="flex items-start gap-4">
 <div className="w-12 h-12 rounded-full bg-error-container text-error flex items-center justify-center flex-shrink-0">
 <span className="material-symbols-outlined text-[26px]" data-icon="warning">warning</span>

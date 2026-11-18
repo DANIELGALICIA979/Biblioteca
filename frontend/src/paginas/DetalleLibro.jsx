@@ -38,6 +38,7 @@ export default function DetalleLibro({ bookId, initialBook, userName, accessToke
   const [showFullContents, setShowFullContents] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [loanType, setLoanType] = useState('digital');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (bookId === undefined || bookId === null || bookId === '') {
@@ -200,7 +201,7 @@ export default function DetalleLibro({ bookId, initialBook, userName, accessToke
               <span className="material-symbols-outlined text-secondary" style={{ fontVariationSettings: "'FILL' 1" }}>local_library</span>
               Biblioteca
             </button>
-            <div className="relative w-full max-w-md hidden sm:block">
+            <div className="relative w-full max-w-md hidden md:block">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-on-surface-variant">
                 <span className="material-symbols-outlined text-[20px]">search</span>
               </div>
@@ -217,7 +218,7 @@ export default function DetalleLibro({ bookId, initialBook, userName, accessToke
               <button type="button" onClick={onNavigateToCatalog} className="border-b-2 border-secondary text-primary dark:text-inverse-primary pb-1 font-semibold text-label-lg font-label-lg">Catálogo</button>
               <button type="button" onClick={onNavigateToLoans} className="text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-inverse-primary transition-colors pb-1 text-label-lg font-label-lg">Mis Préstamos</button>
             </div>
-            <div className="flex items-center pl-3 border-l border-outline-variant/40">
+            <div className="hidden md:flex items-center pl-3 border-l border-outline-variant/40">
               {userName ? (
                 <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded border border-outline-variant/60 text-primary dark:text-inverse-primary font-label-md text-label-md font-semibold">
                   <span className="material-symbols-outlined text-[18px]">person</span>
@@ -231,7 +232,32 @@ export default function DetalleLibro({ bookId, initialBook, userName, accessToke
               )}
             </div>
           </nav>
+          <button
+            type="button"
+            className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded border border-outline-variant/50 text-primary"
+            aria-label={mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="detail-mobile-menu"
+            onClick={() => setMobileMenuOpen((open) => !open)}
+          >
+            <span className="material-symbols-outlined">{mobileMenuOpen ? 'close' : 'menu'}</span>
+          </button>
         </div>
+        {mobileMenuOpen && (
+          <div id="detail-mobile-menu" className="md:hidden border-t border-outline-variant/30 bg-surface-container-low px-gutter py-4 space-y-4">
+            <div className="relative">
+              <span className="material-symbols-outlined absolute inset-y-0 left-3 flex items-center text-[20px] text-on-surface-variant">search</span>
+              <input aria-label="Buscar por título o autor" className="w-full rounded border border-outline-variant/60 bg-surface-container-lowest py-2 pl-10 pr-4 text-body-sm font-body-sm text-on-surface placeholder:text-outline focus:border-secondary focus:outline-none focus:ring-1 focus:ring-secondary" placeholder="Buscar por título o autor." type="search" />
+            </div>
+            <nav aria-label="Navegación móvil" className="flex flex-col gap-3 text-label-lg font-label-lg">
+              <button type="button" onClick={() => { setMobileMenuOpen(false); onNavigateToCatalog?.(); }} className="text-left text-primary">Catálogo</button>
+              <button type="button" onClick={() => { setMobileMenuOpen(false); onNavigateToLoans?.(); }} className="text-left text-on-surface-variant">Mis Préstamos</button>
+              {userName ? <span className="border-t border-outline-variant/30 pt-3 text-primary">{userName}</span> : (
+                <button type="button" onClick={() => { setMobileMenuOpen(false); onNavigateToLogin?.(); }} className="border-t border-outline-variant/30 pt-3 text-left text-primary">Iniciar Sesión</button>
+              )}
+            </nav>
+          </div>
+        )}
       </header>
 
       <main className="mx-auto w-full max-w-[1360px] flex-1 space-y-12 px-gutter py-8 md:px-margin md:py-10">

@@ -12,7 +12,7 @@ const generosDisponibles = [
   'Psicología',
   'Realismo mágico',
   'Romance',
-  'Romance clásico',
+  'Romance clásico', 
   'Suspenso',
   'Terror',
 ];
@@ -32,6 +32,15 @@ export default function Catalogo({ onNavigateToLogin, onNavigateToDetail, onNavi
   const [libros, setLibros] = useState([]);
   const [errorCatalogo, setErrorCatalogo] = useState('');
   const [textoBusqueda, setTextoBusqueda] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(() => typeof window === 'undefined' || window.innerWidth >= 1024);
+
+  useEffect(() => {
+    const desktopQuery = window.matchMedia('(min-width: 1024px)');
+    const updateFiltersOpen = (event) => setFiltersOpen(event.matches);
+    desktopQuery.addEventListener('change', updateFiltersOpen);
+    return () => desktopQuery.removeEventListener('change', updateFiltersOpen);
+  }, []);
 
   // 2. Función genérica para manejar arrays de checkboxes (Géneros y Formatos)
   const handleFiltroArray = (categoria, valor, estaMarcado) => {
@@ -99,7 +108,7 @@ export default function Catalogo({ onNavigateToLogin, onNavigateToDetail, onNavi
               <span className="material-symbols-outlined text-secondary" style={{ fontVariationSettings: "'FILL' 1" }}>local_library</span>
               Biblioteca
             </a>
-            <div className="relative w-full max-w-md hidden sm:block">
+            <div className="relative w-full max-w-md hidden md:block">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-on-surface-variant">
                 <span className="material-symbols-outlined text-[20px]">search</span>
               </div>
@@ -117,7 +126,7 @@ export default function Catalogo({ onNavigateToLogin, onNavigateToDetail, onNavi
               <a className="border-b-2 border-secondary text-primary dark:text-inverse-primary pb-1 font-semibold text-label-lg font-label-lg" href="#">Catálogo</a>
               <button type="button" onClick={onNavigateToLoans} className="text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-inverse-primary transition-colors pb-1 text-label-lg font-label-lg">Mis Préstamos</button>
             </div>
-            <div className="flex items-center pl-3 border-l border-outline-variant/40">
+            <div className="hidden md:flex items-center pl-3 border-l border-outline-variant/40">
               {userName ? (
                 <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded border border-outline-variant/60 text-primary dark:text-inverse-primary font-label-md text-label-md font-semibold">
                   <span className="material-symbols-outlined text-[18px]">person</span>
@@ -131,7 +140,40 @@ export default function Catalogo({ onNavigateToLogin, onNavigateToDetail, onNavi
               )}
             </div>
           </nav>
+          <button
+            type="button"
+            className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded border border-outline-variant/50 text-primary"
+            aria-label={mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="catalog-mobile-menu"
+            onClick={() => setMobileMenuOpen((open) => !open)}
+          >
+            <span className="material-symbols-outlined">{mobileMenuOpen ? 'close' : 'menu'}</span>
+          </button>
         </div>
+        {mobileMenuOpen && (
+          <div id="catalog-mobile-menu" className="md:hidden border-t border-outline-variant/30 bg-surface-container-low px-gutter py-4 space-y-4">
+            <div className="relative">
+              <span className="material-symbols-outlined absolute inset-y-0 left-3 flex items-center text-[20px] text-on-surface-variant">search</span>
+              <input
+                value={textoBusqueda}
+                onChange={(event) => setTextoBusqueda(event.target.value)}
+                className="w-full rounded border border-outline-variant/60 bg-surface-container-lowest py-2 pl-10 pr-4 text-body-sm font-body-sm text-on-surface placeholder:text-outline focus:border-secondary focus:outline-none focus:ring-1 focus:ring-secondary"
+                placeholder="Buscar por título o autor."
+                type="search"
+              />
+            </div>
+            <nav aria-label="Navegación móvil" className="flex flex-col gap-3 text-label-lg font-label-lg">
+              <span className="font-semibold text-primary">Catálogo</span>
+              <button type="button" onClick={() => { setMobileMenuOpen(false); onNavigateToLoans?.(); }} className="text-left text-on-surface-variant">Mis Préstamos</button>
+              {userName ? (
+                <span className="border-t border-outline-variant/30 pt-3 text-primary">{userName}</span>
+              ) : (
+                <button type="button" onClick={() => { setMobileMenuOpen(false); onNavigateToLogin?.(); }} className="border-t border-outline-variant/30 pt-3 text-left text-primary">Iniciar Sesión</button>
+              )}
+            </nav>
+          </div>
+        )}
       </header>
 
       <main className="flex-1 w-full max-w-[1360px] mx-auto px-gutter md:px-margin py-8">
@@ -157,7 +199,7 @@ export default function Catalogo({ onNavigateToLogin, onNavigateToDetail, onNavi
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           <aside className="lg:col-span-3 bg-surface-container-low p-5 rounded border border-outline-variant/40 shadow-[0_2px_8px_-2px_rgba(46,31,20,0.05)] space-y-6">
-            <details className="group/panel space-y-6" open>
+            <details className="group/panel space-y-6" open={filtersOpen} onToggle={(event) => setFiltersOpen(event.currentTarget.open)}>
               <summary className="flex items-center justify-between border-b border-outline-variant/30 pb-3 cursor-pointer list-none select-none">
                 <div className="flex items-center gap-1.5 text-primary font-headline-sm text-headline-sm">
                   <span className="material-symbols-outlined text-[20px] text-secondary">filter_list</span>
@@ -278,17 +320,17 @@ export default function Catalogo({ onNavigateToLogin, onNavigateToDetail, onNavi
           </aside>
 
           <section className="lg:col-span-9 space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-container-low px-4 py-3 rounded border border-outline-variant/30 shadow-[0_2px_8px_-2px_rgba(46,31,20,0.05)]">
+            <div className="flex min-w-0 flex-col gap-3 rounded border border-outline-variant/30 bg-surface-container-low px-3 py-3 shadow-[0_2px_8px_-2px_rgba(46,31,20,0.05)] sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-4">
               <div className="flex items-center gap-2">
                 <span className="text-body-sm font-body-sm text-on-surface font-medium">Visualizando resultados</span>
               </div>
-              <div className="flex items-center gap-2.5">
+              <div className="flex w-full min-w-0 flex-col gap-1.5 sm:w-auto sm:flex-row sm:items-center sm:gap-2.5">
                 <label className="text-label-md font-label-md text-on-surface-variant flex-shrink-0" htmlFor="sort-select">Ordenar por:</label>
-                <div className="relative inline-block">
+                <div className="relative w-full min-w-0 sm:w-auto">
                   <select 
                     value={filtros.ordenarPor}
                     onChange={(e) => setFiltros({ ...filtros, ordenarPor: e.target.value })}
-                    className="appearance-none bg-surface-container-lowest border border-outline-variant/70 text-on-surface text-body-sm font-body-sm rounded pl-3 pr-8 py-1.5 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary" id="sort-select"
+                    className="w-full max-w-full appearance-none rounded border border-outline-variant/70 bg-surface-container-lowest py-1.5 pl-3 pr-8 text-body-sm font-body-sm text-on-surface focus:border-secondary focus:outline-none focus:ring-1 focus:ring-secondary sm:w-auto sm:max-w-[min(100%,20rem)]" id="sort-select"
                   >
                     <option value="">[Criterio de ordenación]</option>
                     <option value="populares">Más populares</option>

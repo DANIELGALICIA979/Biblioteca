@@ -25,6 +25,7 @@ export default function PrestamosLector({
   const [openingLoanId, setOpeningLoanId] = useState('');
   const [selectedLoan, setSelectedLoan] = useState(null);
   const [toast, setToast] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!accessToken) {
@@ -162,13 +163,13 @@ export default function PrestamosLector({
   return (
     <div className="min-h-screen flex flex-col font-body-md text-on-background bg-background selection:bg-secondary-fixed selection:text-on-secondary-fixed">
       <header className="w-full bg-surface-container-low dark:bg-surface-dim border-b border-outline-variant/30 dark:border-outline/20 shadow-[0_2px_8px_-2px_rgba(46,31,20,0.05)] sticky top-0 z-40">
-        <div className="w-full px-gutter md:px-margin max-w-[1360px] mx-auto flex items-center justify-between h-20">
+        <div className="w-full px-gutter md:px-margin max-w-[1360px] mx-auto flex items-center justify-between h-20 gap-3">
           <div className="flex items-center gap-space-lg flex-1 max-w-2xl">
             <button type="button" onClick={onNavigateToCatalog} className="text-headline-md font-headline-md font-semibold text-primary dark:text-inverse-primary tracking-tight flex items-center gap-2 flex-shrink-0">
               <Icon className="text-secondary" >local_library</Icon>
               Biblioteca
             </button>
-            <div className="relative w-full max-w-md hidden sm:block">
+            <div className="relative w-full max-w-md hidden md:block">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-on-surface-variant"><Icon className="text-[20px]">search</Icon></div>
               <input aria-label="Buscar por título o autor" className="w-full pl-10 pr-4 py-2 bg-surface-container-lowest border border-outline-variant/60 rounded text-body-sm font-body-sm text-on-surface placeholder:text-outline focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all" placeholder="Buscar por título o autor." type="search" />
             </div>
@@ -178,7 +179,7 @@ export default function PrestamosLector({
               <button type="button" onClick={onNavigateToCatalog} className="text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-inverse-primary transition-colors pb-1 text-label-lg font-label-lg">Catálogo</button>
               <span aria-current="page" className="border-b-2 border-secondary text-primary dark:text-inverse-primary pb-1 font-semibold text-label-lg font-label-lg">Mis Préstamos</span>
             </div>
-            <div className="flex items-center pl-3 border-l border-outline-variant/40">
+            <div className="hidden md:flex items-center pl-3 border-l border-outline-variant/40">
               {userName ? (
                 <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded border border-outline-variant/60 text-primary dark:text-inverse-primary font-label-md text-label-md font-semibold">
                   <Icon className="text-[18px]">person</Icon><span>{userName}</span>
@@ -190,7 +191,30 @@ export default function PrestamosLector({
               )}
             </div>
           </nav>
+          <button
+            type="button"
+            className="md:hidden inline-flex h-10 w-10 shrink-0 items-center justify-center rounded border border-outline-variant/50 text-primary"
+            aria-label={mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="loans-mobile-menu"
+            onClick={() => setMobileMenuOpen((open) => !open)}
+          >
+            <Icon>{mobileMenuOpen ? 'close' : 'menu'}</Icon>
+          </button>
         </div>
+        {mobileMenuOpen && (
+          <div id="loans-mobile-menu" className="md:hidden border-t border-outline-variant/30 bg-surface-container-low px-gutter py-4 space-y-4">
+            <div className="relative">
+              <Icon className="absolute inset-y-0 left-3 flex items-center text-[20px] text-on-surface-variant">search</Icon>
+              <input aria-label="Buscar por título o autor" className="w-full rounded border border-outline-variant/60 bg-surface-container-lowest py-2 pl-10 pr-4 text-body-sm font-body-sm text-on-surface placeholder:text-outline focus:border-secondary focus:outline-none focus:ring-1 focus:ring-secondary" placeholder="Buscar por título o autor." type="search" />
+            </div>
+            <nav aria-label="Navegación móvil" className="flex flex-col gap-3 text-label-lg font-label-lg">
+              <button type="button" onClick={() => { setMobileMenuOpen(false); onNavigateToCatalog?.(); }} className="text-left text-on-surface-variant">Catálogo</button>
+              <span className="font-semibold text-primary">Mis Préstamos</span>
+              <span className="border-t border-outline-variant/30 pt-3 text-primary">{userName || 'Lector'}</span>
+            </nav>
+          </div>
+        )}
       </header>
 
       <main className="flex-1 w-full max-w-[1360px] mx-auto px-gutter md:px-margin py-space-lg md:py-space-xl">
@@ -333,7 +357,7 @@ export default function PrestamosLector({
 
       {selectedLoan && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="return-modal-title">
-          <div className="bg-surface-container-lowest max-w-lg w-full rounded border border-outline-variant shadow-[0_16px_40px_-8px_rgba(31,21,13,0.16)] overflow-hidden">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded border border-outline-variant bg-surface-container-lowest shadow-[0_16px_40px_-8px_rgba(31,21,13,0.16)]">
             <div className="p-6 pb-4 border-b border-outline-variant/30 flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded bg-secondary-fixed/60 text-on-secondary-fixed flex items-center justify-center"><Icon className="text-[24px]">assignment_return</Icon></div>

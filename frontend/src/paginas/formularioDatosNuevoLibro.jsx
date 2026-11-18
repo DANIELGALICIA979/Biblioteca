@@ -50,6 +50,7 @@ export default function FormularioDatosNuevoLibro({
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const completion = Math.min(100, Math.max(0, Number(metadata?.completitudMetadatos) || 0));
   const administrator = metadata?.administrador ?? {};
 
@@ -268,8 +269,8 @@ export default function FormularioDatosNuevoLibro({
 </div>
 
 <div className="hidden lg:flex items-center flex-1 max-w-xs relative ml-space-sm">
-
-
+<span className="material-symbols-outlined absolute left-3 text-outline">search</span>
+<input aria-label="Buscar por título" className="w-full rounded border border-outline-variant/60 bg-surface-container-lowest py-2 pl-10 pr-4 text-body-sm font-body-sm text-on-surface placeholder:text-outline focus:border-secondary focus:outline-none focus:ring-1 focus:ring-secondary" placeholder="Buscar por título" type="search" />
 </div>
 
 <nav className="hidden md:flex items-center gap-space-lg text-label-lg font-label-lg">
@@ -291,7 +292,29 @@ export default function FormularioDatosNuevoLibro({
 </div>
 </div>
 </div>
+<button
+  type="button"
+  className="md:hidden inline-flex h-10 w-10 shrink-0 items-center justify-center rounded border border-outline-variant/50 text-primary"
+  aria-label={mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
+  aria-expanded={mobileMenuOpen}
+  aria-controls="admin-mobile-menu"
+  onClick={() => setMobileMenuOpen((open) => !open)}
+>
+  <span className="material-symbols-outlined">{mobileMenuOpen ? 'close' : 'menu'}</span>
+</button>
 </div>
+{mobileMenuOpen && (
+  <div id="admin-mobile-menu" className="md:hidden border-t border-outline-variant/30 bg-surface-container-low px-gutter py-4 space-y-4">
+    <div className="relative">
+      <span className="material-symbols-outlined absolute inset-y-0 left-3 flex items-center text-[20px] text-on-surface-variant">search</span>
+      <input aria-label="Buscar por título" className="w-full rounded border border-outline-variant/60 bg-surface-container-lowest py-2 pl-10 pr-4 text-body-sm font-body-sm text-on-surface placeholder:text-outline focus:border-secondary focus:outline-none focus:ring-1 focus:ring-secondary" placeholder="Buscar por título" type="search" />
+    </div>
+    <nav aria-label="Navegación móvil" className="flex flex-col gap-3 text-label-lg font-label-lg">
+      <button type="button" onClick={() => { setMobileMenuOpen(false); onNavigateToDashboard(); }} className="text-left text-on-surface-variant">Inicio</button>
+      <span className="font-semibold text-primary">Catálogo</span>
+    </nav>
+  </div>
+)}
 </header>
 
 <main className="flex-1 w-full max-w-[1360px] mx-auto px-gutter-mobile md:px-margin py-space-lg md:py-space-xl">

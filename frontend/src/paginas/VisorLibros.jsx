@@ -64,7 +64,7 @@ export default function VisorLibros({
   onNavigateToLoans,
 }) {
   const [activeTab, setActiveTab] = useState('toc');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => typeof window === 'undefined' || window.innerWidth >= 1024);
   const [fontMenuOpen, setFontMenuOpen] = useState(false);
   const [fontFamily, setFontFamily] = useState('serif');
   const [fontSize, setFontSize] = useState(18);
@@ -91,6 +91,13 @@ export default function VisorLibros({
   const saveChainRef = useRef(Promise.resolve());
   const isEpubMode = !isPreview && Boolean(prestamoId);
   // TODO: cargar marcadores y notas con fetch al definir sus endpoints y actualizar estos estados.
+  useEffect(() => {
+    const desktopQuery = window.matchMedia('(min-width: 1024px)');
+    const updateSidebar = (event) => setSidebarOpen(event.matches);
+    desktopQuery.addEventListener('change', updateSidebar);
+    return () => desktopQuery.removeEventListener('change', updateSidebar);
+  }, []);
+
   const chapters = Array.isArray(book?.capitulos)
     ? book.capitulos
     : Array.isArray(book?.indice_contenidos) ? book.indice_contenidos : [];
@@ -408,8 +415,8 @@ export default function VisorLibros({
 
   return (
     <div className="reader-app h-screen min-h-[480px] bg-surface-container-low text-on-surface antialiased flex flex-col overflow-hidden selection:bg-secondary-fixed selection:text-on-secondary-fixed">
-      <header className="w-full bg-surface-container-low z-30 px-space-lg py-space-xs flex items-center justify-between min-h-16 gap-3 transition-all duration-200 ease-out border-b border-outline-variant/30">
-        <div className="flex items-center gap-space-md min-w-0">
+      <header className="w-full bg-surface-container-low z-30 px-3 sm:px-space-lg py-2 flex flex-wrap items-center justify-between min-h-16 gap-2 transition-all duration-200 ease-out border-b border-outline-variant/30">
+        <div className="flex items-center gap-space-md min-w-0 flex-1">
           <button type="button" onClick={onNavigateToLoans} title="Regresar a Mis Préstamos" className="inline-flex items-center gap-space-xs text-primary hover:text-secondary text-label-lg font-label-lg transition-colors py-1.5 px-2 rounded-lg hover:bg-surface-container-high/50 shrink-0">
             <Icon className="text-[18px]">arrow_back</Icon><span className="hidden sm:inline">Mis Préstamos</span>
           </button>
@@ -429,7 +436,7 @@ export default function VisorLibros({
           <span className="text-label-md font-label-md text-secondary font-bold">{progress}%</span>
           <span className="text-body-sm font-body-sm text-on-surface-variant">Pág. {activePage} de {activePageCount}</span>
           </div>}
-        <div className="flex items-center gap-space-xs md:gap-space-sm shrink-0">
+        <div className="flex w-full items-center justify-between gap-space-xs shrink-0 sm:w-auto sm:justify-end md:gap-space-sm">
           <div className="flex items-center bg-surface rounded-lg p-0.5 border border-outline-variant/40 shadow-[0_2px_8px_-2px_rgba(46,31,20,0.05)]">
             <button type="button" onClick={() => setFontSize((size) => Math.max(14, size - 2))} className="px-2 py-1 text-label-md font-label-md text-on-surface hover:text-secondary hover:bg-surface-container-high/60 rounded transition-colors" title="Reducir fuente">A<span className="text-[10px] font-bold">-</span></button>
             <span className="text-outline-variant text-[11px] px-1 select-none">|</span>
@@ -476,7 +483,10 @@ export default function VisorLibros({
       </header>
 
       <div className="relative flex-1 flex overflow-hidden w-full">
-        <aside className={`w-80 md:w-96 bg-surface-container-low border-r border-outline-variant/30 flex flex-col shrink-0 transition-all duration-300 ease-in-out z-20 ${sidebarOpen ? '' : '-ml-80 md:-ml-96'}`}>
+        {sidebarOpen && (
+          <button type="button" aria-label="Cerrar índice" onClick={() => setSidebarOpen(false)} className="fixed inset-0 z-30 bg-black/40 lg:hidden" />
+        )}
+        <aside className={`fixed inset-y-0 left-0 z-40 flex w-80 max-w-[calc(100vw-1rem)] shrink-0 flex-col border-r border-outline-variant/30 bg-surface-container-low transition-transform duration-300 ease-in-out md:w-96 lg:static lg:z-20 lg:max-w-none lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="p-space-md border-b border-outline-variant/20">
             <div className="flex items-center justify-between mb-space-sm">
               <div className="flex items-center gap-2"><Icon className="text-secondary text-[20px]">library_books</Icon><h2 className="text-headline-sm font-headline-sm text-primary">Navegación</h2></div>
@@ -622,7 +632,7 @@ export default function VisorLibros({
                 return (
                   <Fragment key={pageNumber}>
                     {index === 1 && <div className="hidden md:block w-8 book-gutter-crease shrink-0 relative self-stretch"><div className="absolute inset-y-0 left-1/2 w-px bg-outline-variant/30 transform -translate-x-1/2" /></div>}
-                    <article className="flex-1 p-6 md:p-10 lg:p-14 flex flex-col justify-between relative selection:bg-secondary/20">
+                    <article className={`flex-1 p-6 md:p-10 lg:p-14 flex flex-col justify-between relative selection:bg-secondary/20 ${index === 1 ? 'hidden md:flex' : ''}`}>
                     <div className="flex justify-between items-center text-outline text-[12px] font-label-md tracking-wider border-b border-outline-variant/20 pb-3 mb-6 select-none">
                       <span className="uppercase">{index === 0 ? title : author}</span>
                       {(currentChapter?.numero_romano ?? currentChapter?.numeral ?? currentChapter?.numero) && index === 0 && <span className="font-headline-sm text-[13px] text-secondary">{currentChapter.numero_romano ?? currentChapter.numeral ?? currentChapter.numero}</span>}
