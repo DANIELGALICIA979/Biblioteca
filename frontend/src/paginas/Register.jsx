@@ -92,7 +92,7 @@ export default function Register({ onReturnToLogin }) {
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] flex flex-col justify-between font-sans text-stone-800">
-      <header className="px-8 py-6 flex justify-between items-center max-w-7xl w-full mx-auto">
+      <header className="px-4 sm:px-8 py-6 flex justify-between items-center max-w-7xl w-full mx-auto">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-[#5A3811] text-amber-100 rounded-md">
             <BookOpen className="w-6 h-6" />
@@ -310,7 +310,7 @@ export default function Register({ onReturnToLogin }) {
 
       </main>
 
-      <footer className="px-8 py-4 border-t border-stone-200/60 max-w-7xl w-full mx-auto flex flex-col sm:flex-row justify-between items-center text-xs text-stone-500 gap-2">
+      <footer className="px-4 sm:px-8 py-4 border-t border-stone-200/60 max-w-7xl w-full mx-auto flex flex-col sm:flex-row justify-between items-center text-xs text-stone-500 gap-2">
         <p className="font-semibold text-stone-700">Biblioteca</p>
         <p>© 2026 Biblioteca Nacional Digital. Todos los derechos reservados.</p>
         <div className="flex gap-4">

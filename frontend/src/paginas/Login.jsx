@@ -226,7 +226,7 @@ export default function Login({ onForgotPassword, onRegister, onNavigateToCatalo
       </main>
 
       {/* Pie de Página */}
-      <footer className="px-8 py-4 border-t border-stone-200/60 max-w-7xl w-full mx-auto flex flex-col sm:flex-row justify-between items-center text-xs text-stone-500 gap-2">
+      <footer className="px-4 sm:px-8 py-4 border-t border-stone-200/60 max-w-7xl w-full mx-auto flex flex-col sm:flex-row justify-between items-center text-xs text-stone-500 gap-2">
         <p className="font-semibold text-stone-700">Biblioteca</p>
         <p>© 2026 Biblioteca Digital. Todos los derechos reservados.</p>
         <div className="flex gap-4">
