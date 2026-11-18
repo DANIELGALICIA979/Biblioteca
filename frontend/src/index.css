@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,300..700;1,7..72,300..700&family=Manrope:wght@300;400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,300..800;1,6..72,300..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,300..700;1,7..72,300..700&family=Manrope:wght@300;400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,300..800;1,6..72,300..800&family=JetBrains+Mono:wght@400;500&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
 
 @tailwind base;
@@ -20,6 +20,69 @@ body {
   display: inline-block;
   vertical-align: middle;
   line-height: 1;
+}
+
+.reader-app .book-spine-shadow {
+  box-shadow:
+    inset 24px 0 36px -18px rgba(46, 31, 20, 0.14),
+    inset -24px 0 36px -18px rgba(46, 31, 20, 0.14),
+    0 8px 30px -6px rgba(46, 31, 20, 0.08);
+}
+
+.reader-app .book-gutter-crease {
+  background: linear-gradient(to right, rgba(46, 31, 20, 0.09) 0%, rgba(46, 31, 20, 0.02) 40%, rgba(46, 31, 20, 0.09) 100%);
+}
+
+.reader-app .dropcap::first-letter {
+  float: left;
+  padding: 4px 8px 2px 0;
+  color: #904d00;
+  font-family: 'Newsreader', serif;
+  font-size: 3.5rem;
+  font-weight: 600;
+  line-height: 0.85;
+}
+
+.reader-app input[type='range'] {
+  appearance: none;
+  background: transparent;
+}
+
+.reader-app input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border: 2px solid #fdf9f2;
+  border-radius: 9999px;
+  background: #904d00;
+  box-shadow: 0 1px 4px rgba(46, 31, 20, 0.35);
+  cursor: pointer;
+}
+
+.reader-app input[type='range']::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 4px;
+  border-radius: 9999px;
+  background: #e6e2db;
+  cursor: pointer;
+}
+
+.reader-app input[type='range']::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border: 2px solid #fdf9f2;
+  border-radius: 9999px;
+  background: #904d00;
+  box-shadow: 0 1px 4px rgba(46, 31, 20, 0.35);
+  cursor: pointer;
+}
+
+.reader-app input[type='range']::-moz-range-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: #e6e2db;
+  cursor: pointer;
 }
 
 .spine-shadow {

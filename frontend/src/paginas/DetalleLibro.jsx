@@ -22,7 +22,7 @@ const hasValue = (value) => value !== null
   && value !== ''
   && (!Array.isArray(value) || value.length > 0);
 
-export default function DetalleLibro({ bookId, initialBook, userName, accessToken, onNavigateToCatalog, onNavigateToLoans, onNavigateToLogin }) {
+export default function DetalleLibro({ bookId, initialBook, userName, accessToken, onNavigateToCatalog, onNavigateToLoans, onNavigateToReader, onNavigateToLogin }) {
   const [book, setBook] = useState(initialBook ?? null);
   const [loadedBookId, setLoadedBookId] = useState(null);
   const isLoading = Boolean(bookId) && String(loadedBookId) !== String(bookId);
@@ -294,7 +294,7 @@ export default function DetalleLibro({ bookId, initialBook, userName, accessToke
                 <span className="material-symbols-outlined text-base">{isWishlisted ? 'favorite' : 'favorite_border'}</span>
                 {isWishlisted ? 'En lista de deseos' : 'Añadir a lista de deseos'}
               </button>
-              <button type="button" className="flex items-center justify-center gap-1.5 rounded border border-outline-variant/60 px-3 py-2 text-label-sm font-label-sm text-primary transition-colors hover:bg-surface-container">
+              <button type="button" onClick={() => onNavigateToReader?.(book)} className="flex items-center justify-center gap-1.5 rounded border border-outline-variant/60 px-3 py-2 text-label-sm font-label-sm text-primary transition-colors hover:bg-surface-container">
                 <span className="material-symbols-outlined text-base">visibility</span> Vista previa
               </button>
             </div>

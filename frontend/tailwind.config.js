@@ -83,7 +83,8 @@ export default {
         "label-sm": ["Manrope", "sans-serif"],
         "label-md": ["Manrope", "sans-serif"],
         "body-lg": ["Literata", "serif"],
-        "display-lg": ["Newsreader", "serif"]
+        "display-lg": ["Newsreader", "serif"],
+        "mono": ["JetBrains Mono", "monospace"]
       },
       fontSize: {
         "display-lg": ["48px", { lineHeight: "56px", letterSpacing: "-0.02em", fontWeight: "600" }],

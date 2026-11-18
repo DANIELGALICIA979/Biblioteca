@@ -9,6 +9,7 @@ import DashBoardAdmin from './paginas/dashBoardAdmin';
 import CatalogoAdmin from './paginas/catalogoAdmin';
 import FormularioDatosNuevoLibro from './paginas/formularioDatosNuevoLibro';
 import PrestamosLector from './paginas/prestamosLector';
+import VisorLibros from './paginas/VisorLibros';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 const AUTH_SESSION_KEY = 'biblioteca.auth-session';
@@ -31,6 +32,7 @@ const makeAuthSession = (payload, fallbackName = '') => {
 
 export default function App() {
   const [selectedBook, setSelectedBook] = useState(null);
+  const [readerPreview, setReaderPreview] = useState(false);
   const [userName, setUserName] = useState('');
   const [adminToken, setAdminToken] = useState('');
   const [readerToken, setReaderToken] = useState('');
@@ -470,7 +472,21 @@ export default function App() {
           userName={userName}
           onNavigateToCatalog={() => setCurrentScreen('catalogo')}
           onNavigateToLoans={() => setCurrentScreen('prestamos-lector')}
+          onNavigateToReader={(book) => {
+            if (book) setSelectedBook(book);
+            setReaderPreview(true);
+            setCurrentScreen('visor-libro');
+          }}
           onNavigateToLogin={() => setCurrentScreen('login')}
+        />
+      )}
+      {currentScreen === 'visor-libro' && (
+        <VisorLibros
+          key={selectedBook?.id ?? 'visor-libro'}
+          book={selectedBook}
+          isPreview={readerPreview}
+          previewPageLimit={selectedBook?.limite_paginas_vista_previa}
+          onNavigateToLoans={() => setCurrentScreen(readerPreview ? 'detalle' : 'prestamos-lector')}
         />
       )}
       {currentScreen === 'login' && (
